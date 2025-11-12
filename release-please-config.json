@@ -1,0 +1,10 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "helm",
+      "package-name": "control-layer",
+      "include-component-in-tag": false,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}
