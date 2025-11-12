@@ -19,28 +19,16 @@ This chart deploys the control layer service, which includes:
 - Kubernetes 1.19+
 - Helm 3.0+
 
-### Install the Chart
+### Install from OCI Registry
 
 ```bash
-helm install my-control-layer ./control-layer-helm
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version 0.1.1
 ```
 
-### Install with Custom Values
+You can also provide custom values:
 
 ```bash
-helm install my-control-layer ./control-layer-helm -f custom-values.yaml
-```
-
-### Upgrade the Chart
-
-```bash
-helm upgrade my-control-layer ./control-layer-helm
-```
-
-### Uninstall the Chart
-
-```bash
-helm uninstall my-control-layer
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version 0.1.1 -f custom-values.yaml
 ```
 
 ## Configuration
