@@ -21,35 +21,14 @@ jobs:
         with:
           version: "3.13.0"
 
-      - name: Install dependencies
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Install helm-unittest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest.git
 
-      - name: Lint Helm chart
-        run: |
-          helm lint .
+      - name: Lint chart
+        run: just lint
 
-      - name: Run Helm unit tests
-        run: |
-          if [ -d "tests" ]; then
-            helm unittest .
-          else
-            echo "No tests directory found, skipping unit tests"
-          fi
-
-      - name: Test Helm template rendering
-        run: |
-          # Test with default values
-          helm template test-release . > /dev/null
-          echo "✅ Default values template rendering passed"
-
-          # Test with serviceMonitor enabled
-          helm template test-release . --set serviceMonitor.enabled=true > /dev/null
-          echo "✅ ServiceMonitor enabled template rendering passed"
-
-          # Test with external database
-          helm template test-release . \
-            --set postgresql.enabled=false \
-            --set secrets.controlLayer.data.DATABASE_URL="postgres://user:pass@host:5432/db" > /dev/null
-          echo "✅ External database template rendering passed"
-
-          echo "✅ All template rendering tests passed"
+      - name: Run tests
+        run: just test

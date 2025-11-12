@@ -25,6 +25,9 @@ jobs:
         with:
           version: "3.13.0"
 
+      - name: Install just
+        uses: extractions/setup-just@v2
+
       - name: Install yq
         uses: mikefarah/yq@master
 
@@ -42,22 +45,12 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Publishing version: $VERSION"
 
-      - name: Lint chart
-        run: helm lint .
-
-      - name: Package chart
-        run: |
-          helm package . --version ${{ steps.version.outputs.version }}
-          echo "Packaged chart: control-layer-${{ steps.version.outputs.version }}.tgz"
-
       - name: Login to GitHub Container Registry
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username ${{ github.actor }} --password-stdin
 
-      - name: Push chart to OCI registry
-        run: |
-          helm push control-layer-${{ steps.version.outputs.version }}.tgz oci://ghcr.io/doublewordai/charts
-          echo "✅ Chart published to ghcr.io/doublewordai/charts/control-layer:${{ steps.version.outputs.version }}"
+      - name: Release chart
+        run: just release ${{ steps.version.outputs.version }}
 
       - name: Summary
         run: |
