@@ -1,0 +1,128 @@
+suite: test service configurations and port mappings
+templates:
+  - service.yaml
+  - postgres/service.yaml
+tests:
+  # Control Layer Service Tests
+  - it: should create control-layer service with default configuration
+    template: service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 3001
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ports[0].name
+          value: http
+
+  - it: should configure control-layer service with custom values
+    set:
+      service.type: "LoadBalancer"
+      service.port: 8080
+    template: service.yaml
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - equal:
+          path: spec.ports[0].port
+          value: 8080
+
+  - it: should have correct control-layer service selector
+    template: service.yaml
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: control-layer
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: control-layer
+
+  # PostgreSQL Service Tests
+  - it: should not create postgres service when postgresql is disabled
+    set:
+      postgresql.enabled: false
+    template: postgres/service.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create postgres service when postgresql is enabled
+    set:
+      postgresql.enabled: true
+    template: postgres/service.yaml
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-postgres
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: postgres
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.ports[0].port
+          value: 5432
+      - equal:
+          path: spec.ports[0].targetPort
+          value: postgres
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ports[0].name
+          value: postgres
+
+  - it: should have correct postgres service selector
+    set:
+      postgresql.enabled: true
+    template: postgres/service.yaml
+    asserts:
+      - equal:
+          path: spec.selector["app.kubernetes.io/name"]
+          value: control-layer
+      - equal:
+          path: spec.selector["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: postgres
+
+  # Cross-service integration test
+  - it: should create all services with proper component labels
+    set:
+      postgresql.enabled: true
+    templates:
+      - service.yaml
+      - postgres/service.yaml
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+        template: service.yaml
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: postgres
+        template: postgres/service.yaml

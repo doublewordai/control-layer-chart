@@ -9,8 +9,17 @@ fullnameOverride: ""
 # This is for the secrets for pulling an image from a private repository
 imagePullSecrets: []
 
-# Service account reference (expected to be created by parent chart)
-serviceAccountName: ""
+# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
 
 # Service-specific secrets configuration
 secrets:
@@ -25,14 +34,12 @@ secrets:
 
   # PostgreSQL database credentials (used if postgresql.enabled is true)
   postgres:
+    create: true
+    name: ""
     data:
       POSTGRES_DB: "clay"
       POSTGRES_USER: "clay"
       POSTGRES_PASSWORD: "clay_password"
-
-# PostgreSQL configuration (for determining internal vs external DB)
-postgresql:
-  enabled: true
 
 # This will set the replicaset count
 replicaCount: 1
@@ -147,3 +154,44 @@ config: |
 
   # Secret key for session signing (set via DWCTL_SECRET_KEY environment variable)
   secret_key: "your-secret-key-here"
+
+# PostgreSQL Database Configuration
+# Set enabled: true to deploy PostgreSQL as part of this chart
+# Set enabled: false to use external PostgreSQL (configure DATABASE_URL via secrets.controlLayer.data)
+postgresql:
+  # Deploy internal PostgreSQL StatefulSet
+  enabled: true
+
+  # StatefulSet configuration (only used when enabled: true)
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "15"
+
+  # Database credentials are read from secrets.postgres
+
+  # Data persistence settings (only used when enabled: true)
+  persistence:
+    # Set to false for ephemeral storage (data lost on pod restart)
+    enabled: true
+    # Leave empty to use cluster default storage class
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+    annotations: {}
+
+  # Pod Security Configuration
+  # These settings ensure PostgreSQL runs as the postgres user (UID/GID 999)
+  # and that mounted volumes have correct ownership
+  podSecurityContext:
+    # Sets group ownership of mounted volumes to postgres group
+    fsGroup: 999
+  securityContext:
+    # Run container as postgres user (standard for postgres Docker image)
+    runAsUser: 999
+    runAsGroup: 999
+    # Security best practice - prevent running as root
+    runAsNonRoot: true
