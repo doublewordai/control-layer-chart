@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/doublewordai/control-layer-chart/compare/v0.2.0...v0.2.1) (2025-11-20)
+
+
+### Bug Fixes
+
+* install helm unit test ([67f921f](https://github.com/doublewordai/control-layer-chart/commit/67f921f880511c90442e36df5a74c46a421f5da5))
+
 ## [0.2.0](https://github.com/doublewordai/control-layer-chart/compare/v0.1.2...v0.2.0) (2025-11-20)
 
 
