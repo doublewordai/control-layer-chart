@@ -1,0 +1,210 @@
+suite: test postgresql statefulset configuration
+templates:
+  - postgres/statefulset.yaml
+tests:
+  - it: should not create statefulset when postgresql is disabled
+    set:
+      postgresql.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create statefulset with default configuration
+    set:
+      postgresql.enabled: true
+      secrets.postgres.create: true
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-postgres
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: postgres
+      - equal:
+          path: spec.serviceName
+          value: RELEASE-NAME-control-layer-postgres
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "postgres:15"
+
+  - it: should use custom image configuration when specified
+    set:
+      postgresql.enabled: true
+      postgresql.image.repository: "custom-postgres"
+      postgresql.image.tag: "14"
+      postgresql.image.pullPolicy: "Always"
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "custom-postgres:14"
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: "Always"
+
+  - it: should configure environment variables from secrets
+    set:
+      postgresql.enabled: true
+      secrets.postgres.create: true
+      secrets.postgres.name: "custom-postgres-secret"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: custom-postgres-secret
+                key: POSTGRES_DB
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: custom-postgres-secret
+                key: POSTGRES_USER
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: custom-postgres-secret
+                key: POSTGRES_PASSWORD
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PGDATA
+            value: "/var/lib/postgresql/data/pgdata"
+
+  - it: should configure volume mounts
+    set:
+      postgresql.enabled: true
+      secrets.postgres.create: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: postgres-data
+            mountPath: /var/lib/postgresql/data
+
+  - it: should configure probes correctly
+    set:
+      postgresql.enabled: true
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value:
+            - sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
+          value: 30
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value:
+            - sh
+            - -c
+            - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.initialDelaySeconds
+          value: 5
+
+  - it: should create persistent volume claim template when persistence enabled
+    set:
+      postgresql.enabled: true
+      postgresql.persistence.enabled: true
+      postgresql.persistence.size: "10Gi"
+      postgresql.persistence.storageClass: "fast-ssd"
+      postgresql.persistence.accessModes:
+        - ReadWriteOnce
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: postgres-data
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.resources.requests.storage
+          value: "10Gi"
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: "fast-ssd"
+      - contains:
+          path: spec.volumeClaimTemplates[0].spec.accessModes
+          content: "ReadWriteOnce"
+
+  - it: should use emptyDir when persistence is disabled
+    set:
+      postgresql.enabled: true
+      postgresql.persistence.enabled: false
+      secrets.postgres.create: true
+    asserts:
+      - isNull:
+          path: spec.volumeClaimTemplates
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: postgres-data
+            emptyDir: {}
+
+  - it: should configure security contexts
+    set:
+      postgresql.enabled: true
+      postgresql.podSecurityContext.fsGroup: 999
+      postgresql.securityContext.runAsUser: 999
+      postgresql.securityContext.runAsGroup: 999
+      postgresql.securityContext.runAsNonRoot: true
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.fsGroup
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsGroup
+          value: 999
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+
+  - it: should configure resources when specified
+    set:
+      postgresql.enabled: true
+      postgresql.resources.limits.cpu: "500m"
+      postgresql.resources.limits.memory: "512Mi"
+      postgresql.resources.requests.cpu: "250m"
+      postgresql.resources.requests.memory: "256Mi"
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: "500m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: "512Mi"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "250m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: "256Mi"
+
+  - it: should configure replica count
+    set:
+      postgresql.enabled: true
+      postgresql.replicaCount: 3
+      secrets.postgres.create: true
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3

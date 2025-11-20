@@ -1,0 +1,175 @@
+suite: test configmap generation and mounting
+templates:
+  - configmap.yaml
+  - deployment.yaml
+tests:
+  # ConfigMap Creation Tests
+  - it: should create control-layer configmap with default configuration
+    template: configmap.yaml
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-config
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+      - isNotNull:
+          path: data["control-layer-config.yaml"]
+
+  - it: should include default control-layer configuration in configmap
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'host: "0\.0\.0\.0"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'port: 3001'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'secret_key: "your-secret-key-here"'
+
+  - it: should use custom control-layer configuration when provided
+    set:
+      config: |
+        # Custom Control Layer Configuration
+        host: "127.0.0.1"
+        port: 8080
+        admin_email: "admin@example.com"
+        
+        model_sources:
+          - name: "Production"
+            url: "http://prod-server:9000"
+            sync_interval: "30s"
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'host: "127\.0\.0\.1"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'port: 8080'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'admin_email: "admin@example\.com"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'name: "Production"'
+
+  # ConfigMap Mounting Tests
+  - it: should mount configmap in control-layer deployment
+    templates:
+      - deployment.yaml
+      - configmap.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /app/config.yaml
+            subPath: control-layer-config.yaml
+            readOnly: true
+        template: deployment.yaml
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            configMap:
+              name: RELEASE-NAME-control-layer-config
+        template: deployment.yaml
+
+  - it: should have consistent configmap name between configmap and deployment
+    templates:
+      - deployment.yaml
+      - configmap.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-config
+        template: configmap.yaml
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.name
+          value: RELEASE-NAME-control-layer-config
+        template: deployment.yaml
+
+  - it: should have correct labels on configmap
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: metadata.labels["helm.sh/chart"]
+          pattern: ^control-layer-[0-9]+\.[0-9]+\.[0-9]+$
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: control-layer
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+      - equal:
+          path: metadata.labels["app.kubernetes.io/managed-by"]
+          value: Helm
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+
+  - it: should handle multi-line YAML configuration correctly
+    set:
+      config: |
+        # Control Layer Configuration with complex structure
+        host: "0.0.0.0"
+        port: 3001
+        
+        model_sources:
+          - name: "GPT-4"
+            url: "https://api.openai.com/v1"
+            sync_interval: "15s"
+            headers:
+              Authorization: "Bearer token"
+          - name: "Claude"
+            url: "https://api.anthropic.com/v1"
+            sync_interval: "20s"
+        
+        metadata:
+          region: "us-west-2"
+          environment: "production"
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'name: "GPT-4"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'name: "Claude"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'Authorization: "Bearer token"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'environment: "production"'
+
+  - it: should preserve YAML formatting and indentation
+    set:
+      config: |
+        host: "0.0.0.0"
+        nested:
+          level1:
+            level2:
+              value: "deep"
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'host: "0\.0\.0\.0"'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: 'nested:'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: '  level1:'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: '    level2:'
+      - matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: '      value: "deep"'

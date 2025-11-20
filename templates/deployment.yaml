@@ -9,6 +9,7 @@ spec:
   selector:
     matchLabels:
       {{- include "control-layer.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: control-layer
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -25,9 +26,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- if .Values.serviceAccountName }}
-      serviceAccountName: {{ .Values.serviceAccountName }}
-      {{- end }}
+      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
