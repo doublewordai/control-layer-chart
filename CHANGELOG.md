@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/doublewordai/control-layer-chart/compare/v0.2.1...v0.2.2) (2025-11-24)
+
+
+### Bug Fixes
+
+* update appVersion to 0.8.0 ([#7](https://github.com/doublewordai/control-layer-chart/issues/7)) ([1734c49](https://github.com/doublewordai/control-layer-chart/commit/1734c496e15c95beb9b6d1fceda431945a924a09))
+
 ## [0.2.1](https://github.com/doublewordai/control-layer-chart/compare/v0.2.0...v0.2.1) (2025-11-20)
 
 
