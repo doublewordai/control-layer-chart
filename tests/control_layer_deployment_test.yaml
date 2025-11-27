@@ -1,0 +1,68 @@
+suite: test control-layer deployment
+templates:
+  - deployment.yaml
+tests:
+  - it: should create control-layer deployment with default appVersion
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -control-layer$
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: ^ghcr\.io/doublewordai/control-layer:.*$
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: control-layer
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should use custom image tag when specified
+    set:
+      image.tag: "custom-tag"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/doublewordai/control-layer:custom-tag
+
+  - it: should mount config and use secrets when enabled
+    set:
+      secrets.controlLayer.create: true
+      secrets.controlLayer.data.DATABASE_URL: "postgres://test"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /app/config.yaml
+            subPath: control-layer-config.yaml
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: config
+            configMap:
+              name: RELEASE-NAME-control-layer-config
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-control-layer-secret
+                key: DATABASE_URL
+
+  - it: should use correct labels and selectors
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: control-layer
+      - equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: control-layer
+

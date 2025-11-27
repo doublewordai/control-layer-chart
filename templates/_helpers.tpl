@@ -50,3 +50,36 @@ Selector labels
 app.kubernetes.io/name: {{ include "control-layer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Common labels for postgres
+*/}}
+{{- define "control-layer.postgres.labels" -}}
+helm.sh/chart: {{ include "control-layer.chart" . }}
+{{ include "control-layer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: postgres
+{{- end }}
+
+{{/*
+Selector labels for postgres
+*/}}
+{{- define "control-layer.postgres.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: postgres
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "control-layer.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "control-layer.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
