@@ -51,7 +51,6 @@ tests:
     set:
       postgresql.enabled: true
       secrets.postgres.create: true
-      secrets.postgres.name: "custom-postgres-secret"
     asserts:
       - contains:
           path: spec.template.spec.containers[0].env
@@ -59,7 +58,7 @@ tests:
             name: POSTGRES_DB
             valueFrom:
               secretKeyRef:
-                name: custom-postgres-secret
+                name: RELEASE-NAME-control-layer-postgres-secret
                 key: POSTGRES_DB
       - contains:
           path: spec.template.spec.containers[0].env
@@ -67,7 +66,7 @@ tests:
             name: POSTGRES_USER
             valueFrom:
               secretKeyRef:
-                name: custom-postgres-secret
+                name: RELEASE-NAME-control-layer-postgres-secret
                 key: POSTGRES_USER
       - contains:
           path: spec.template.spec.containers[0].env
@@ -75,7 +74,7 @@ tests:
             name: POSTGRES_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: custom-postgres-secret
+                name: RELEASE-NAME-control-layer-postgres-secret
                 key: POSTGRES_PASSWORD
       - contains:
           path: spec.template.spec.containers[0].env
