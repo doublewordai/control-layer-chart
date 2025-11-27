@@ -41,21 +41,20 @@ spec:
               containerPort: 5432
               protocol: TCP
           env:
-            {{- $secretName := .Values.secrets.postgres.name | default (printf "%s-postgres-secret" (include "control-layer.fullname" $)) }}
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: {{ $secretName }}
+                  name: {{ include "control-layer.fullname" . }}-postgres-secret
                   key: POSTGRES_DB
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ $secretName }}
+                  name: {{ include "control-layer.fullname" . }}-postgres-secret
                   key: POSTGRES_USER
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ $secretName }}
+                  name: {{ include "control-layer.fullname" . }}-postgres-secret
                   key: POSTGRES_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
