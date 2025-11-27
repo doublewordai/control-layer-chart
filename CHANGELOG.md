@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/doublewordai/control-layer-chart/compare/v0.2.3...v0.2.4) (2025-11-27)
+
+
+### Bug Fixes
+
+* remove name/create options, consolidate database_url default setting ([#19](https://github.com/doublewordai/control-layer-chart/issues/19)) ([1519afc](https://github.com/doublewordai/control-layer-chart/commit/1519afcbed90aa911a27e472506fedc4364dd456))
+
 ## [0.2.3](https://github.com/doublewordai/control-layer-chart/compare/v0.2.2...v0.2.3) (2025-11-24)
 
 
