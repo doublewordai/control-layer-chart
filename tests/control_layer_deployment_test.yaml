@@ -29,7 +29,6 @@ tests:
 
   - it: should mount config and use secrets when enabled
     set:
-      secrets.controlLayer.create: true
       secrets.controlLayer.data.DATABASE_URL: "postgres://test"
     asserts:
       - contains:
@@ -46,13 +45,10 @@ tests:
             configMap:
               name: RELEASE-NAME-control-layer-config
       - contains:
-          path: spec.template.spec.containers[0].env
+          path: spec.template.spec.containers[0].envFrom
           content:
-            name: DATABASE_URL
-            valueFrom:
-              secretKeyRef:
-                name: RELEASE-NAME-control-layer-secret
-                key: DATABASE_URL
+            secretRef:
+              name: RELEASE-NAME-control-layer-secret
 
   - it: should use correct labels and selectors
     asserts:

@@ -25,17 +25,17 @@ serviceAccount:
 secrets:
   controlLayer:
     # Whether to create this secret. If its not created, it ought to exist as name with these values
-    create: true
-    name: ""
     data:
       # DATABASE_URL will be templated in secret.yaml for internal PostgreSQL (if empty)
       # For external PostgreSQL, override with your external connection string
       DATABASE_URL: ""
+      # If you're using stripe for payment, you'll also want:
+      #DWCTL_PAYMENT__STRIPE__API_KEY:
+      #DWCTL_PAYMENT__STRIPE__WEBHOOK_SECRET:
+      #DWCTL_PAYMENT__STRIPE__PRICE_ID:
 
   # PostgreSQL database credentials (used if postgresql.enabled is true)
   postgres:
-    create: true
-    name: ""
     data:
       POSTGRES_DB: "clay"
       POSTGRES_USER: "clay"

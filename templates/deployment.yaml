@@ -43,26 +43,16 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "control-layer.fullname" . }}-secret
+          {{- with .Values.env }}
           env:
-            {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- end }}
-            {{- if .Values.secrets.controlLayer.create }}
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "control-layer.fullname" . }}-secret
-                  key: DATABASE_URL
-            {{- else if .Values.secrets.controlLayer.name }}
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.controlLayer.name }}
-                  key: DATABASE_URL
-            {{- end }}
+          {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
