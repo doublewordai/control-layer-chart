@@ -168,7 +168,7 @@ postgresql:
   image:
     repository: postgres
     pullPolicy: IfNotPresent
-    tag: "15"
+    tag: "18"
 
   # Database credentials are read from secrets.postgres
 
