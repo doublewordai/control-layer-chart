@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/doublewordai/control-layer-chart/compare/v0.2.4...v0.3.0) (2025-11-28)
+
+
+### Features
+
+* bump 0.12.0 ([#22](https://github.com/doublewordai/control-layer-chart/issues/22)) ([f365dde](https://github.com/doublewordai/control-layer-chart/commit/f365dde330a2557ac3f3bd525ce412e451e4bcb8))
+
 ## [0.2.4](https://github.com/doublewordai/control-layer-chart/compare/v0.2.3...v0.2.4) (2025-11-27)
 
 
