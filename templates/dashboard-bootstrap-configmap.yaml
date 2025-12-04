@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-layer.fullname" . }}-dashboard-bootstrap
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+data:
+  index.js: |
+    let userId;
+    try {
+      const userReq = await fetch("/admin/api/v1/users/current");
+      const userJson = await userReq.json();
+      userId = userJson.id;
+    } catch (error) {
+      console.warn("Failed to fetch user ID:", error);
+    }
+    const phScript = document.createElement("script");
+    phScript.src = "https://cdn.posthog.com/posthog.js";
+    phScript.async = true; // <--- makes it non-blocking
+    phScript.onload = function() {
+      posthog.init("phc_Gsc7iKs7KCkxySkNRu8pmJb3dYr4RcrOgYPvnBmvviH", {
+        api_host: "https://eu.i.posthog.com",
+        cross_subdomain_cookie: true,
+        person_profiles: "always"
+      });
+      if(userId) posthog.identify(userId);
+    };
+    document.head.appendChild(phScript);
