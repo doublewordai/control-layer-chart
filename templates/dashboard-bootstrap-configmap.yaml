@@ -12,7 +12,7 @@ data:
       const userJson = await userReq.json();
       userId = userJson.id;
     } catch (error) {
-      console.error("Failed to fetch user ID:", error);
+      console.warn("Failed to fetch user ID:", error);
     }
     const phScript = document.createElement("script");
     phScript.src = "https://cdn.posthog.com/posthog.js";
