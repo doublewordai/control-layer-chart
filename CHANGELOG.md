@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/doublewordai/control-layer-chart/compare/v0.3.0...v0.4.0) (2025-12-04)
+
+
+### Features
+
+* bootstrap script volume mount ([#24](https://github.com/doublewordai/control-layer-chart/issues/24)) ([406cc5e](https://github.com/doublewordai/control-layer-chart/commit/406cc5e5eb2f5ffcbb1eeeaecd5d8d8d43757697))
+
 ## [0.3.0](https://github.com/doublewordai/control-layer-chart/compare/v0.2.4...v0.3.0) (2025-11-28)
 
 
