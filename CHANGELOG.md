@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/doublewordai/control-layer-chart/compare/v0.4.0...v0.4.1) (2025-12-04)
+
+
+### Bug Fixes
+
+* posthog bootstrap ([#26](https://github.com/doublewordai/control-layer-chart/issues/26)) ([0255367](https://github.com/doublewordai/control-layer-chart/commit/0255367b6775ea634446d4c4455fe7fc855c5bf7))
+
 ## [0.4.0](https://github.com/doublewordai/control-layer-chart/compare/v0.3.0...v0.4.0) (2025-12-04)
 
 
