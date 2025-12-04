@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
 data:
-  index.js: |
+  bootstrap.js: |
     let userId;
     try {
       const userReq = await fetch("/admin/api/v1/users/current");
