@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/doublewordai/control-layer-chart/compare/v0.4.3...v0.4.4) (2025-12-04)
+
+
+### Bug Fixes
+
+* bootstrap js env var ([#32](https://github.com/doublewordai/control-layer-chart/issues/32)) ([00cdbd5](https://github.com/doublewordai/control-layer-chart/commit/00cdbd55be796f68e9051566976d1853ec9797e5))
+
 ## [0.4.3](https://github.com/doublewordai/control-layer-chart/compare/v0.4.2...v0.4.3) (2025-12-04)
 
 
