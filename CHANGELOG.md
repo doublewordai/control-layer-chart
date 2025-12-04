@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/doublewordai/control-layer-chart/compare/v0.4.2...v0.4.3) (2025-12-04)
+
+
+### Bug Fixes
+
+* mount bootstrap.js to static dir ([137da14](https://github.com/doublewordai/control-layer-chart/commit/137da1467946d24b860d3f60bd6376b68f1d2e38))
+
 ## [0.4.2](https://github.com/doublewordai/control-layer-chart/compare/v0.4.1...v0.4.2) (2025-12-04)
 
 
