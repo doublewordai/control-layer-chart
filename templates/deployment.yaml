@@ -71,7 +71,7 @@ spec:
               subPath: control-layer-config.yaml
               readOnly: true
             - name: dashboard-bootstrap
-              mountPath: /app/dashboard/public/bootstrap.js
+              mountPath: /app/static/bootstrap.js
               subPath: bootstrap.js
               readOnly: true
             {{- with .Values.volumeMounts }}
