@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/doublewordai/control-layer-chart/compare/v0.4.1...v0.4.2) (2025-12-04)
+
+
+### Bug Fixes
+
+* mount bootstrap to public ([#28](https://github.com/doublewordai/control-layer-chart/issues/28)) ([3df680f](https://github.com/doublewordai/control-layer-chart/commit/3df680f73a8491788b46894bb02811abb2a1f032))
+
 ## [0.4.1](https://github.com/doublewordai/control-layer-chart/compare/v0.4.0...v0.4.1) (2025-12-04)
 
 
