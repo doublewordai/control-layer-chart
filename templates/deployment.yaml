@@ -46,13 +46,18 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ include "control-layer.fullname" . }}-secret
-          {{- with .Values.env }}
           env:
+            - name: DASHBOARD_BOOTSTRAP_JS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-dashboard-bootstrap
+                  key: bootstrap.js
+            {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-          {{- end }}
+            {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
@@ -70,10 +75,6 @@ spec:
               mountPath: /app/config.yaml
               subPath: control-layer-config.yaml
               readOnly: true
-            - name: dashboard-bootstrap
-              mountPath: /app/static/bootstrap.js
-              subPath: bootstrap.js
-              readOnly: true
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -81,9 +82,6 @@ spec:
         - name: config
           configMap:
             name: {{ include "control-layer.fullname" . }}-config
-        - name: dashboard-bootstrap
-          configMap:
-            name: {{ include "control-layer.fullname" . }}-dashboard-bootstrap
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
