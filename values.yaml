@@ -155,6 +155,15 @@ config: |
   # Secret key for session signing (set via DWCTL_SECRET_KEY environment variable)
   secret_key: "your-secret-key-here"
 
+# Bootstrap JavaScript configuration
+bootstrap:
+  enabled: false
+  # You can either provide a file path (relative to chart root) or direct content
+  # file: ""
+  # Inline bootstrap JS content should be base64 encoded
+  # content: |
+  #   ...
+
 # PostgreSQL Database Configuration
 # Set enabled: true to deploy PostgreSQL as part of this chart
 # Set enabled: false to use external PostgreSQL (configure DATABASE_URL via secrets.controlLayer.data)

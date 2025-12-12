@@ -6,4 +6,12 @@ metadata:
     {{- include "control-layer.labels" . | nindent 4 }}
 data:
   control-layer-config.yaml: |
-{{- .Values.config | nindent 4 }}
+    {{- .Values.config | nindent 4 }}
+  {{- if .Values.bootstrap.enabled }}
+  bootstrap.js: |
+    {{- if $.Values.bootstrap.file }}
+    {{- $.Files.Get .Values.bootstrap.file | nindent 4 }}
+    {{- else }}
+    {{- .Values.bootstrap.content | nindent 4 }}
+    {{- end }}
+  {{- end }}
