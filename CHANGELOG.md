@@ -1,5 +1,54 @@
 # Changelog
 
+## [0.4.5](https://github.com/doublewordai/control-layer-chart/compare/v0.4.4...v0.4.5) (2025-12-12)
+
+
+### Bug Fixes
+
+* add bootstrap configuration more generally ([#34](https://github.com/doublewordai/control-layer-chart/issues/34)) ([97c7daf](https://github.com/doublewordai/control-layer-chart/commit/97c7dafbdd7ae520932472fec86b43351daf3ef0))
+
+## [0.4.4](https://github.com/doublewordai/control-layer-chart/compare/v0.4.3...v0.4.4) (2025-12-04)
+
+
+### Bug Fixes
+
+* bootstrap js env var ([#32](https://github.com/doublewordai/control-layer-chart/issues/32)) ([00cdbd5](https://github.com/doublewordai/control-layer-chart/commit/00cdbd55be796f68e9051566976d1853ec9797e5))
+
+## [0.4.3](https://github.com/doublewordai/control-layer-chart/compare/v0.4.2...v0.4.3) (2025-12-04)
+
+
+### Bug Fixes
+
+* mount bootstrap.js to static dir ([137da14](https://github.com/doublewordai/control-layer-chart/commit/137da1467946d24b860d3f60bd6376b68f1d2e38))
+
+## [0.4.2](https://github.com/doublewordai/control-layer-chart/compare/v0.4.1...v0.4.2) (2025-12-04)
+
+
+### Bug Fixes
+
+* mount bootstrap to public ([#28](https://github.com/doublewordai/control-layer-chart/issues/28)) ([3df680f](https://github.com/doublewordai/control-layer-chart/commit/3df680f73a8491788b46894bb02811abb2a1f032))
+
+## [0.4.1](https://github.com/doublewordai/control-layer-chart/compare/v0.4.0...v0.4.1) (2025-12-04)
+
+
+### Bug Fixes
+
+* posthog bootstrap ([#26](https://github.com/doublewordai/control-layer-chart/issues/26)) ([0255367](https://github.com/doublewordai/control-layer-chart/commit/0255367b6775ea634446d4c4455fe7fc855c5bf7))
+
+## [0.4.0](https://github.com/doublewordai/control-layer-chart/compare/v0.3.0...v0.4.0) (2025-12-04)
+
+
+### Features
+
+* bootstrap script volume mount ([#24](https://github.com/doublewordai/control-layer-chart/issues/24)) ([406cc5e](https://github.com/doublewordai/control-layer-chart/commit/406cc5e5eb2f5ffcbb1eeeaecd5d8d8d43757697))
+
+## [0.3.0](https://github.com/doublewordai/control-layer-chart/compare/v0.2.4...v0.3.0) (2025-11-28)
+
+
+### Features
+
+* bump 0.12.0 ([#22](https://github.com/doublewordai/control-layer-chart/issues/22)) ([f365dde](https://github.com/doublewordai/control-layer-chart/commit/f365dde330a2557ac3f3bd525ce412e451e4bcb8))
+
 ## [0.2.4](https://github.com/doublewordai/control-layer-chart/compare/v0.2.3...v0.2.4) (2025-11-27)
 
 

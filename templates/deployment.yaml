@@ -46,18 +46,25 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ include "control-layer.fullname" . }}-secret
-          {{- if or .Values.fusillade.enabled .Values.env }}
           env:
+            {{- if .Values.bootstrap.enabled }}
+            - name: DASHBOARD_BOOTSTRAP_JS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-config
+                  key: bootstrap.js
+            {{- end }}
             {{- if .Values.fusillade.enabled }}
             # Disable fusillade daemon on control-layer pods when running separately
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
               value: "never"
             {{- end }}
-            {{- range $key, $value := .Values.env }}
+            {{- with .Values.env }}
+            {{- range $key, $value := . }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-          {{- end }}
+            {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

@@ -173,3 +173,113 @@ tests:
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: '      value: "deep"'
+
+  # Bootstrap Configuration Tests
+  - it: should not include bootstrap.js in configmap with default values
+    template: configmap.yaml
+    asserts:
+      - isNull:
+          path: data["bootstrap.js"]
+
+  - it: should not set DASHBOARD_BOOTSTRAP_JS env var in deployment with default values
+    template: deployment.yaml
+    asserts:
+      - isNullOrEmpty:
+          path: spec.template.spec.containers[0].env
+
+  - it: should include bootstrap.js in configmap when enabled with content
+    set:
+      bootstrap:
+        enabled: true
+        content: |
+          console.log("Bootstrap initialized");
+          window.BOOTSTRAP_CONFIG = { theme: "dark" };
+    template: configmap.yaml
+    asserts:
+      - isNotNull:
+          path: data["bootstrap.js"]
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: 'console\.log\("Bootstrap initialized"\);'
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: 'window\.BOOTSTRAP_CONFIG = \{ theme: "dark" \};'
+
+  - it: should include bootstrap.js in configmap when enabled with file
+    set:
+      bootstrap:
+        enabled: true
+        file: "tests/fixtures/test-bootstrap.js"
+    template: configmap.yaml
+    asserts:
+      - isNotNull:
+          path: data["bootstrap.js"]
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: 'TEST_BOOTSTRAP'
+
+  - it: should set DASHBOARD_BOOTSTRAP_JS env var in deployment when bootstrap is enabled
+    set:
+      bootstrap:
+        enabled: true
+        content: |
+          console.log("Bootstrap test");
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DASHBOARD_BOOTSTRAP_JS
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-control-layer-config
+                key: bootstrap.js
+
+  - it: should have correct configmap reference in deployment env var for bootstrap
+    set:
+      bootstrap:
+        enabled: true
+        content: |
+          window.APP_CONFIG = {};
+    templates:
+      - deployment.yaml
+      - configmap.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-config
+        template: configmap.yaml
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DASHBOARD_BOOTSTRAP_JS
+            valueFrom:
+              configMapKeyRef:
+                name: RELEASE-NAME-control-layer-config
+                key: bootstrap.js
+        template: deployment.yaml
+
+  - it: should preserve bootstrap.js content formatting
+    set:
+      bootstrap:
+        enabled: true
+        content: |
+          // Multi-line bootstrap script
+          (function() {
+            const config = {
+              apiUrl: "https://api.example.com",
+              features: ["feature1", "feature2"]
+            };
+            window.APP_CONFIG = config;
+          })();
+    template: configmap.yaml
+    asserts:
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: '// Multi-line bootstrap script'
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: 'apiUrl: "https://api\.example\.com"'
+      - matchRegex:
+          path: data["bootstrap.js"]
+          pattern: 'features: \["feature1", "feature2"\]'
