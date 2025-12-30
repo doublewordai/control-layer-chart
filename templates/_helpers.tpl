@@ -83,3 +83,25 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Common labels for fusillade
+*/}}
+{{- define "control-layer.fusillade.labels" -}}
+helm.sh/chart: {{ include "control-layer.chart" . }}
+{{ include "control-layer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: fusillade
+{{- end }}
+
+{{/*
+Selector labels for fusillade
+*/}}
+{{- define "control-layer.fusillade.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: fusillade
+{{- end }}

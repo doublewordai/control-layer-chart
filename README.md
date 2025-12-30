@@ -116,6 +116,28 @@ The chart supports both internal and external PostgreSQL databases:
 | `volumes` | Additional volumes | `[]` |
 | `volumeMounts` | Additional volume mounts | `[]` |
 
+### Fusillade Daemon Configuration
+
+The fusillade daemon handles background batch processing tasks. By default, it runs within the control layer pods based on leader election. You can optionally deploy it as a separate deployment for better resource isolation and independent scaling.
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `fusillade.enabled` | Deploy fusillade as a separate deployment | `false` |
+| `fusillade.replicaCount` | Number of fusillade replicas | `1` |
+| `fusillade.image.repository` | Override image repository | (uses main image) |
+| `fusillade.image.tag` | Override image tag | (uses main image) |
+| `fusillade.resources` | CPU/Memory resource requests/limits | `{}` |
+| `fusillade.podAnnotations` | Annotations for fusillade pods | `{}` |
+| `fusillade.podLabels` | Labels for fusillade pods | `{}` |
+| `fusillade.nodeSelector` | Node selector for fusillade pods | `{}` |
+| `fusillade.tolerations` | Tolerations for fusillade pods | `[]` |
+| `fusillade.affinity` | Affinity rules for fusillade pods | `{}` |
+| `fusillade.env` | Additional environment variables | `{}` |
+
+When `fusillade.enabled: true`:
+- The control layer pods will have `background_services.batch_daemon.enabled` set to `never`
+- The fusillade pods will have `background_services.batch_daemon.enabled` set to `always`
+
 ## Example Configurations
 
 ### With External Database
@@ -154,6 +176,24 @@ serviceMonitor:
   interval: 15s
   labels:
     prometheus: kube-prometheus
+```
+
+### With Separate Fusillade Deployment
+
+```yaml
+# fusillade-values.yaml
+replicaCount: 3
+
+fusillade:
+  enabled: true
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
 ```
 
 ## License

@@ -155,6 +155,70 @@ config: |
   # Secret key for session signing (set via DWCTL_SECRET_KEY environment variable)
   secret_key: "your-secret-key-here"
 
+# Fusillade Daemon Configuration
+# When enabled, deploys the fusillade daemon as a separate deployment from the control layer.
+# This sets background_services.batch_daemon.enabled to:
+#   - "never" on control-layer pods (disables fusillade there)
+#   - "always" on fusillade pods (runs fusillade daemon)
+fusillade:
+  # Set to true to deploy fusillade daemon separately from the control layer
+  enabled: false
+
+  # Number of fusillade daemon replicas
+  replicaCount: 1
+
+  # Override image settings for fusillade (defaults to main image settings)
+  image: {}
+    # repository: ghcr.io/doublewordai/control-layer
+    # pullPolicy: IfNotPresent
+    # tag: ""
+
+  # Resource limits and requests for fusillade pods
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 256Mi
+
+  # Pod annotations specific to fusillade
+  podAnnotations: {}
+
+  # Pod labels specific to fusillade
+  podLabels: {}
+
+  # Security contexts for fusillade pods
+  podSecurityContext: {}
+  securityContext: {}
+
+  # Node selection and scheduling
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Liveness probe for fusillade daemon
+  # Defaults to HTTP healthcheck on the same port as the control layer
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+
+  # Readiness probe for fusillade daemon
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+
+  # Additional environment variables for fusillade (merged with main env)
+  env: {}
+
+  # Additional volumes for fusillade pods
+  volumes: []
+
+  # Additional volume mounts for fusillade pods
+  volumeMounts: []
+
 # PostgreSQL Database Configuration
 # Set enabled: true to deploy PostgreSQL as part of this chart
 # Set enabled: false to use external PostgreSQL (configure DATABASE_URL via secrets.controlLayer.data)
