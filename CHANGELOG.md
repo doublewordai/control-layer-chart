@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/doublewordai/control-layer-chart/compare/v0.4.5...v0.5.0) (2025-12-30)
+
+
+### Features
+
+* isolate fusillade into its own deployment ([#36](https://github.com/doublewordai/control-layer-chart/issues/36)) ([79d1d1a](https://github.com/doublewordai/control-layer-chart/commit/79d1d1a650d441269ad0b32a09b1e280d9028037))
+
 ## [0.4.5](https://github.com/doublewordai/control-layer-chart/compare/v0.4.4...v0.4.5) (2025-12-12)
 
 
