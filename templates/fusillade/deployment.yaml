@@ -1,24 +1,24 @@
+{{- if .Values.fusillade.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "control-layer.fullname" . }}
+  name: {{ include "control-layer.fullname" . }}-fusillade
   labels:
-    {{- include "control-layer.labels" . | nindent 4 }}
+    {{- include "control-layer.fusillade.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.fusillade.replicaCount }}
   selector:
     matchLabels:
-      {{- include "control-layer.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: control-layer
+      {{- include "control-layer.fusillade.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with .Values.fusillade.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "control-layer.labels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
+        {{- include "control-layer.fusillade.labels" . | nindent 8 }}
+        {{- with .Values.fusillade.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
@@ -27,18 +27,18 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
-      {{- with .Values.podSecurityContext }}
+      {{- with (.Values.fusillade.podSecurityContext | default .Values.podSecurityContext) }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: control-layer
-          {{- with .Values.securityContext }}
+        - name: fusillade
+          {{- with (.Values.fusillade.securityContext | default .Values.securityContext) }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.fusillade.image.repository | default .Values.image.repository }}:{{ .Values.fusillade.image.tag | default .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.fusillade.image.pullPolicy | default .Values.image.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -47,33 +47,26 @@ spec:
             - secretRef:
                 name: {{ include "control-layer.fullname" . }}-secret
           env:
-            {{- if .Values.bootstrap.enabled }}
-            - name: DASHBOARD_BOOTSTRAP_JS
-              valueFrom:
-                configMapKeyRef:
-                  name: {{ include "control-layer.fullname" . }}-config
-                  key: bootstrap.js
-            {{- end }}
-            {{- if .Values.fusillade.enabled }}
-            # Disable fusillade daemon on control-layer pods when running separately
+            # Enable fusillade daemon on these pods
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
-              value: "never"
-            {{- end }}
-            {{- with .Values.env }}
-            {{- range $key, $value := . }}
+              value: "always"
+            {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- range $key, $value := .Values.fusillade.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
             {{- end }}
-          {{- with .Values.livenessProbe }}
+          {{- with .Values.fusillade.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.readinessProbe }}
+          {{- with .Values.fusillade.readinessProbe }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.resources }}
+          {{- with (.Values.fusillade.resources | default .Values.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -82,6 +75,9 @@ spec:
               mountPath: /app/config.yaml
               subPath: control-layer-config.yaml
               readOnly: true
+            {{- with .Values.fusillade.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -89,18 +85,22 @@ spec:
         - name: config
           configMap:
             name: {{ include "control-layer.fullname" . }}-config
+        {{- with .Values.fusillade.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with (.Values.fusillade.nodeSelector | default .Values.nodeSelector) }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with (.Values.fusillade.affinity | default .Values.affinity) }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with (.Values.fusillade.tolerations | default .Values.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
