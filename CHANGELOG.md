@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/doublewordai/control-layer-chart/compare/v0.5.0...v0.6.0) (2026-01-07)
+
+
+### Features
+
+* add manual trigger to release-please workflow ([cb826c8](https://github.com/doublewordai/control-layer-chart/commit/cb826c84e56dff3bec0456c84f18af08ff9510f3))
+* **fusillade:** add service and servicemonitor for metrics ([8ee1006](https://github.com/doublewordai/control-layer-chart/commit/8ee10062d846b397e123099389935dfe33e52265))
+
+
+### Bug Fixes
+
+* pin helm-unittest version in release-please workflow ([fec7531](https://github.com/doublewordai/control-layer-chart/commit/fec7531c73e58f456b8df3ba1e8ac0f08d507c47))
+
 ## [0.5.0](https://github.com/doublewordai/control-layer-chart/compare/v0.4.5...v0.5.0) (2025-12-30)
 
 
