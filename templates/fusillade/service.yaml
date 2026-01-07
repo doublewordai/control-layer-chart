@@ -1,0 +1,17 @@
+{{- if .Values.fusillade.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "control-layer.fullname" . }}-fusillade
+  labels:
+    {{- include "control-layer.fusillade.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "control-layer.fusillade.selectorLabels" . | nindent 4 }}
+{{- end }}
