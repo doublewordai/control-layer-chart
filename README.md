@@ -22,13 +22,13 @@ This chart deploys the control layer service, which includes:
 ### Install from OCI Registry
 
 ```bash
-helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version 0.1.1
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer
 ```
 
 You can also provide custom values:
 
 ```bash
-helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version 0.1.1 -f custom-values.yaml
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer -f custom-values.yaml
 ```
 
 ## Configuration
