@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/doublewordai/control-layer-chart/compare/v0.6.0...v0.6.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* generation of postgres secret ([982a063](https://github.com/doublewordai/control-layer-chart/commit/982a063b05ad51e7debe51055741f7a09f3ea4aa))
+* unit tests ([985181a](https://github.com/doublewordai/control-layer-chart/commit/985181a9b6460d49b109d1294cfbf2ec9ec2220c))
+
 ## [0.6.0](https://github.com/doublewordai/control-layer-chart/compare/v0.5.0...v0.6.0) (2026-01-07)
 
 
