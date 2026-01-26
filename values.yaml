@@ -210,6 +210,38 @@ fusillade:
       path: /healthz
       port: http
 
+  # Database pool overrides for fusillade
+  # These override the main config's database pool settings for fusillade pods only
+  # Useful when fusillade needs different connection limits than control-layer pods
+  database:
+    # Main database pool settings (overrides config.database.pool)
+    pool: {}
+      # max_connections: 100
+      # min_connections: 1
+      # acquire_timeout_secs: 30
+      # idle_timeout_secs: 600
+      # max_lifetime_secs: 1800
+    # Replica pool settings (overrides config.database.replica_pool)
+    replica_pool: {}
+      # max_connections: 100
+      # min_connections: 1
+    # Fusillade schema pool settings (overrides config.database.fusillade.pool)
+    fusillade_pool: {}
+      # max_connections: 100
+      # min_connections: 1
+    # Fusillade schema replica pool settings (overrides config.database.fusillade.replica_pool)
+    fusillade_replica_pool: {}
+      # max_connections: 100
+      # min_connections: 1
+    # Outlet schema pool settings (overrides config.database.outlet.pool)
+    outlet_pool: {}
+      # max_connections: 100
+      # min_connections: 1
+    # Outlet schema replica pool settings (overrides config.database.outlet.replica_pool)
+    outlet_replica_pool: {}
+      # max_connections: 100
+      # min_connections: 1
+
   # Additional environment variables for fusillade (merged with main env)
   env: {}
 
