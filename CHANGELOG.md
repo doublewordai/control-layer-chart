@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/doublewordai/control-layer-chart/compare/v0.6.1...v0.7.0) (2026-01-26)
+
+
+### Features
+
+* **fusillade:** add database pool configuration overrides ([#43](https://github.com/doublewordai/control-layer-chart/issues/43)) ([76182f7](https://github.com/doublewordai/control-layer-chart/commit/76182f72a9cf867ddf247d480884a23eecd11b19))
+
 ## [0.6.1](https://github.com/doublewordai/control-layer-chart/compare/v0.6.0...v0.6.1) (2026-01-08)
 
 
