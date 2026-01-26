@@ -50,6 +50,33 @@ spec:
             # Enable fusillade daemon on these pods
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
               value: "always"
+            {{- /* Database pool overrides for fusillade */}}
+            {{- with .Values.fusillade.database }}
+            {{- range $key, $value := .pool }}
+            - name: DWCTL_DATABASE__POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .replica_pool }}
+            - name: DWCTL_DATABASE__REPLICA_POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .fusillade_pool }}
+            - name: DWCTL_DATABASE__FUSILLADE__POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .fusillade_replica_pool }}
+            - name: DWCTL_DATABASE__FUSILLADE__REPLICA_POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .outlet_pool }}
+            - name: DWCTL_DATABASE__OUTLET__POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .outlet_replica_pool }}
+            - name: DWCTL_DATABASE__OUTLET__REPLICA_POOL__{{ $key | upper }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
