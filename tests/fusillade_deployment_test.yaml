@@ -1,0 +1,166 @@
+suite: test fusillade deployment
+templates:
+  - fusillade/deployment.yaml
+tests:
+  - it: should not create fusillade deployment when disabled
+    set:
+      fusillade.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create fusillade deployment when enabled
+    set:
+      fusillade.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - matchRegex:
+          path: metadata.name
+          pattern: -fusillade$
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: fusillade
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade
+
+  - it: should always enable batch daemon via env var
+    set:
+      fusillade.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
+            value: "always"
+
+  - it: should set database pool env vars when fusillade.database.pool is configured
+    set:
+      fusillade.enabled: true
+      fusillade.database.pool.max_connections: 100
+      fusillade.database.pool.min_connections: 5
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__POOL__MAX_CONNECTIONS
+            value: "100"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__POOL__MIN_CONNECTIONS
+            value: "5"
+
+  - it: should set replica pool env vars when fusillade.database.replica_pool is configured
+    set:
+      fusillade.enabled: true
+      fusillade.database.replica_pool.max_connections: 200
+      fusillade.database.replica_pool.min_connections: 10
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_POOL__MAX_CONNECTIONS
+            value: "200"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_POOL__MIN_CONNECTIONS
+            value: "10"
+
+  - it: should set fusillade schema pool env vars when configured
+    set:
+      fusillade.enabled: true
+      fusillade.database.fusillade_pool.max_connections: 500
+      fusillade.database.fusillade_pool.min_connections: 1
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MAX_CONNECTIONS
+            value: "500"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MIN_CONNECTIONS
+            value: "1"
+
+  - it: should set fusillade replica pool env vars when configured
+    set:
+      fusillade.enabled: true
+      fusillade.database.fusillade_replica_pool.max_connections: 300
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__REPLICA_POOL__MAX_CONNECTIONS
+            value: "300"
+
+  - it: should set outlet pool env vars when configured
+    set:
+      fusillade.enabled: true
+      fusillade.database.outlet_pool.max_connections: 150
+      fusillade.database.outlet_replica_pool.max_connections: 150
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__OUTLET__POOL__MAX_CONNECTIONS
+            value: "150"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__OUTLET__REPLICA_POOL__MAX_CONNECTIONS
+            value: "150"
+
+  - it: should set all pool settings together
+    set:
+      fusillade.enabled: true
+      fusillade.database.pool.max_connections: 100
+      fusillade.database.replica_pool.max_connections: 100
+      fusillade.database.fusillade_pool.max_connections: 500
+      fusillade.database.fusillade_replica_pool.max_connections: 500
+      fusillade.database.outlet_pool.max_connections: 200
+      fusillade.database.outlet_replica_pool.max_connections: 200
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__POOL__MAX_CONNECTIONS
+            value: "100"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_POOL__MAX_CONNECTIONS
+            value: "100"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MAX_CONNECTIONS
+            value: "500"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__REPLICA_POOL__MAX_CONNECTIONS
+            value: "500"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__OUTLET__POOL__MAX_CONNECTIONS
+            value: "200"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__OUTLET__REPLICA_POOL__MAX_CONNECTIONS
+            value: "200"
+
+  - it: should not set database pool env vars when not configured
+    set:
+      fusillade.enabled: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__POOL__MAX_CONNECTIONS
+          any: true
