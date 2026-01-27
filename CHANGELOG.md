@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.7.0](https://github.com/doublewordai/control-layer-chart/compare/v0.6.1...v0.7.0) (2026-01-26)
+
+
+### Features
+
+* **fusillade:** add database pool configuration overrides ([#43](https://github.com/doublewordai/control-layer-chart/issues/43)) ([76182f7](https://github.com/doublewordai/control-layer-chart/commit/76182f72a9cf867ddf247d480884a23eecd11b19))
+
+## [0.6.1](https://github.com/doublewordai/control-layer-chart/compare/v0.6.0...v0.6.1) (2026-01-08)
+
+
+### Bug Fixes
+
+* generation of postgres secret ([982a063](https://github.com/doublewordai/control-layer-chart/commit/982a063b05ad51e7debe51055741f7a09f3ea4aa))
+* unit tests ([985181a](https://github.com/doublewordai/control-layer-chart/commit/985181a9b6460d49b109d1294cfbf2ec9ec2220c))
+
+## [0.6.0](https://github.com/doublewordai/control-layer-chart/compare/v0.5.0...v0.6.0) (2026-01-07)
+
+
+### Features
+
+* add manual trigger to release-please workflow ([cb826c8](https://github.com/doublewordai/control-layer-chart/commit/cb826c84e56dff3bec0456c84f18af08ff9510f3))
+* **fusillade:** add service and servicemonitor for metrics ([8ee1006](https://github.com/doublewordai/control-layer-chart/commit/8ee10062d846b397e123099389935dfe33e52265))
+
+
+### Bug Fixes
+
+* pin helm-unittest version in release-please workflow ([fec7531](https://github.com/doublewordai/control-layer-chart/commit/fec7531c73e58f456b8df3ba1e8ac0f08d507c47))
+
 ## [0.5.0](https://github.com/doublewordai/control-layer-chart/compare/v0.4.5...v0.5.0) (2025-12-30)
 
 
