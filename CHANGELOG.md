@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/doublewordai/control-layer-chart/compare/v0.7.0...v0.8.0) (2026-01-27)
+
+
+### Features
+
+* add startup probe support for control-layer and fusillade ([#46](https://github.com/doublewordai/control-layer-chart/issues/46)) ([3dcf67f](https://github.com/doublewordai/control-layer-chart/commit/3dcf67f3f48172fddd62069b840abf75ec071b1f))
+
 ## [0.7.0](https://github.com/doublewordai/control-layer-chart/compare/v0.6.1...v0.7.0) (2026-01-26)
 
 
