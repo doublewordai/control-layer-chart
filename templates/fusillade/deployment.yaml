@@ -93,6 +93,10 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.fusillade.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- with (.Values.fusillade.resources | default .Values.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
