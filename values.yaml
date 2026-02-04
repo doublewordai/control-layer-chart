@@ -285,7 +285,7 @@ bootstrap:
 # When enabled, deploys the scouter collector as a separate deployment from the control layer.
 # Scouter needs network access to the control-layer admin/monitoring endpoints.
 scouter:
-  enabled: true
+  enabled: false
 
   replicaCount: 1
 
