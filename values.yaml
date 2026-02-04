@@ -30,7 +30,7 @@ secrets:
       # For external PostgreSQL, override with your external connection string
       DATABASE_URL: ""
       # Shared system API key (also used by scouter by default)
-      SYSTEM_API_KEY: ""
+      SYSTEM_API_KEY: "sk-3DlZERk7cNfJNZuRQ8TICKajNpJxAUy2lLmiMxC3JPo"
       # If you're using stripe for payment, you'll also want:
       #DWCTL_PAYMENT__STRIPE__API_KEY:
       #DWCTL_PAYMENT__STRIPE__WEBHOOK_SECRET:
@@ -50,7 +50,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/doublewordai/control-layer
   pullPolicy: IfNotPresent
-  tag: "5.0.3"
+  tag: ""
 
 # This is for setting Kubernetes Annotations to a Pod.
 podAnnotations: {}
