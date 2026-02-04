@@ -105,3 +105,25 @@ app.kubernetes.io/name: {{ include "control-layer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: fusillade
 {{- end }}
+
+{{/*
+Common labels for scouter
+*/}}
+{{- define "control-layer.scouter.labels" -}}
+helm.sh/chart: {{ include "control-layer.chart" . }}
+{{ include "control-layer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: scouter
+{{- end }}
+
+{{/*
+Selector labels for scouter
+*/}}
+{{- define "control-layer.scouter.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: scouter
+{{- end }}

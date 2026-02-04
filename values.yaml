@@ -29,6 +29,8 @@ secrets:
       # DATABASE_URL will be templated in secret.yaml for internal PostgreSQL (if empty)
       # For external PostgreSQL, override with your external connection string
       DATABASE_URL: ""
+      # Shared system API key (also used by scouter by default)
+      SYSTEM_API_KEY: ""
       # If you're using stripe for payment, you'll also want:
       #DWCTL_PAYMENT__STRIPE__API_KEY:
       #DWCTL_PAYMENT__STRIPE__WEBHOOK_SECRET:
@@ -48,7 +50,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/doublewordai/control-layer
   pullPolicy: IfNotPresent
-  tag: ""
+  tag: "5.0.3"
 
 # This is for setting Kubernetes Annotations to a Pod.
 podAnnotations: {}
@@ -280,6 +282,55 @@ bootstrap:
   # Inline bootstrap JS content should be base64 encoded
   # content: |
   #   ...
+
+# Scouter Configuration
+# When enabled, deploys the scouter collector as a separate deployment from the control layer.
+# Scouter needs network access to the control-layer admin/monitoring endpoints.
+scouter:
+  enabled: true
+
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/doublewordai/scouter
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  # The base URL scouter will use to reach the control-layer service.
+  # Defaults to the in-cluster service URL (http://<release>-control-layer:<service.port>)
+  controlLayerBaseUrl: ""
+
+  # API keys used by scouter.
+  # Scouter always uses SYSTEM_API_KEY from the shared control-layer secret:
+  #   secrets.controlLayer.data.SYSTEM_API_KEY
+
+  service:
+    type: LoadBalancer
+    port: 4321
+
+  env: {}
+
+  resources: {}
+
+  podAnnotations: {}
+  podLabels: {}
+
+  podSecurityContext: {}
+  securityContext: {}
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  livenessProbe:
+    httpGet:
+      path: /report
+      port: http
+
+  readinessProbe:
+    httpGet:
+      path: /report
+      port: http
 
 # PostgreSQL Database Configuration
 # Set enabled: true to deploy PostgreSQL as part of this chart
