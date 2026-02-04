@@ -12,8 +12,9 @@ spec:
       {{- include "control-layer.scouter.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.scouter.podAnnotations }}
       annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.scouter.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
@@ -55,9 +56,15 @@ spec:
             - name: CONTROL_LAYER_BASE_URL
               value: {{ printf "http://%s:%v" (include "control-layer.fullname" .) .Values.service.port | quote }}
             - name: CONTROL_LAYER_API_KEY
-              value: "$(SYSTEM_API_KEY)"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-secret
+                  key: SYSTEM_API_KEY
             - name: SCOUTER_INGEST_API_KEY
-              value: "$(SYSTEM_API_KEY)"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-secret
+                  key: SYSTEM_API_KEY
             {{- with .Values.scouter.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}

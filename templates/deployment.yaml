@@ -12,8 +12,9 @@ spec:
       app.kubernetes.io/component: control-layer
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
       annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:

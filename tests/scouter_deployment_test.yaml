@@ -27,7 +27,7 @@ tests:
             name: CONTROL_LAYER_BASE_URL
             value: "http://RELEASE-NAME-control-layer:3001"
 
-  - it: should default control-layer api key to SYSTEM_API_KEY from envFrom
+  - it: should set api keys from shared secret
     set:
       scouter.enabled: true
     asserts:
@@ -40,15 +40,16 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: CONTROL_LAYER_API_KEY
-            value: "$(SYSTEM_API_KEY)"
-
-  - it: should default ingest api key to SYSTEM_API_KEY from envFrom
-    set:
-      scouter.enabled: true
-    asserts:
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-control-layer-secret
+                key: SYSTEM_API_KEY
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: SCOUTER_INGEST_API_KEY
-            value: "$(SYSTEM_API_KEY)"
+            valueFrom:
+              secretKeyRef:
+                name: RELEASE-NAME-control-layer-secret
+                key: SYSTEM_API_KEY
 
