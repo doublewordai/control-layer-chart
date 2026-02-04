@@ -52,13 +52,3 @@ tests:
             name: SCOUTER_INGEST_API_KEY
             value: "$(SYSTEM_API_KEY)"
 
-  - it: should allow overriding control layer base url
-    set:
-      scouter.enabled: true
-      scouter.controlLayerBaseUrl: "http://custom:1234"
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: CONTROL_LAYER_BASE_URL
-            value: "http://custom:1234"

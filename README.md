@@ -150,7 +150,6 @@ Scouter is a capacity reporting service that polls the control-layer admin/monit
 | `scouter.image.tag` | Scouter image tag | `latest` |
 | `scouter.service.type` | Scouter service type | `LoadBalancer` |
 | `scouter.service.port` | Scouter HTTP port | `4321` |
-| `scouter.controlLayerBaseUrl` | Control-layer base URL scouter will call | (defaults to in-cluster service) |
 | `secrets.controlLayer.data.SYSTEM_API_KEY` | Shared API key used by control-layer and scouter | `""` |
 | `scouter.env` | Additional env vars | `{}` |
 

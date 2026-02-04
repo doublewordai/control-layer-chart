@@ -296,10 +296,6 @@ scouter:
     pullPolicy: IfNotPresent
     tag: "latest"
 
-  # The base URL scouter will use to reach the control-layer service.
-  # Defaults to the in-cluster service URL (http://<release>-control-layer:<service.port>)
-  controlLayerBaseUrl: ""
-
   # API keys used by scouter.
   # Scouter always uses SYSTEM_API_KEY from the shared control-layer secret:
   #   secrets.controlLayer.data.SYSTEM_API_KEY

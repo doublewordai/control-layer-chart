@@ -53,7 +53,7 @@ spec:
             - name: PORT
               value: {{ .Values.scouter.service.port | quote }}
             - name: CONTROL_LAYER_BASE_URL
-              value: {{ .Values.scouter.controlLayerBaseUrl | default (printf "http://%s:%v" (include "control-layer.fullname" .) .Values.service.port) | quote }}
+              value: {{ printf "http://%s:%v" (include "control-layer.fullname" .) .Values.service.port | quote }}
             - name: CONTROL_LAYER_API_KEY
               value: "$(SYSTEM_API_KEY)"
             - name: SCOUTER_INGEST_API_KEY
