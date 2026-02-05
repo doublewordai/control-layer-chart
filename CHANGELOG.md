@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/doublewordai/control-layer-chart/compare/v0.8.0...v0.8.1) (2026-02-05)
+
+
+### Features
+
+* add scouter to control layer chart ([#51](https://github.com/doublewordai/control-layer-chart/issues/51)) ([a5d32c2](https://github.com/doublewordai/control-layer-chart/commit/a5d32c2570e4ee4e0b063699655cc9d573abe983))
+
 ## [0.8.0](https://github.com/doublewordai/control-layer-chart/compare/v0.7.0...v0.8.0) (2026-01-27)
 
 
