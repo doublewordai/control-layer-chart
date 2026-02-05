@@ -1,0 +1,38 @@
+suite: test scouter service
+templates:
+  - scouter/service.yaml
+tests:
+  - it: should not create scouter service when disabled
+    set:
+      scouter.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create scouter service when enabled
+    set:
+      scouter.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-scouter
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - equal:
+          path: spec.ports[0].port
+          value: 4321
+      - equal:
+          path: spec.ports[0].targetPort
+          value: http
+
+  - it: should allow overriding scouter service type
+    set:
+      scouter.enabled: true
+      scouter.service.type: ClusterIP
+    asserts:
+      - equal:
+          path: spec.type
+          value: ClusterIP

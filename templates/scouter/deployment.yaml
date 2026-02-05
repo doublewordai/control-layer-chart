@@ -1,0 +1,97 @@
+{{- if .Values.scouter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "control-layer.fullname" . }}-scouter
+  labels:
+    {{- include "control-layer.scouter.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.scouter.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "control-layer.scouter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.scouter.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "control-layer.scouter.labels" . | nindent 8 }}
+        {{- with .Values.scouter.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
+      {{- with (.Values.scouter.podSecurityContext | default .Values.podSecurityContext) }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: scouter
+          {{- with (.Values.scouter.securityContext | default .Values.securityContext) }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.scouter.image.repository }}:{{ .Values.scouter.image.tag | default "latest" }}"
+          imagePullPolicy: {{ .Values.scouter.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.scouter.service.port }}
+              protocol: TCP
+          # Use the same secret-injection mechanism as the main control-layer container
+          envFrom:
+            - secretRef:
+                name: {{ include "control-layer.fullname" . }}-secret
+          env:
+            - name: SCOUTER_MODE
+              value: "collector"
+            - name: PORT
+              value: {{ .Values.scouter.service.port | quote }}
+            - name: CONTROL_LAYER_BASE_URL
+              value: {{ printf "http://%s:%v" (include "control-layer.fullname" .) .Values.service.port | quote }}
+            - name: CONTROL_LAYER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-secret
+                  key: SYSTEM_API_KEY
+            - name: SCOUTER_INGEST_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "control-layer.fullname" . }}-secret
+                  key: SYSTEM_API_KEY
+            {{- with .Values.scouter.env }}
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- with .Values.scouter.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.scouter.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with (.Values.scouter.resources | default .Values.resources) }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with (.Values.scouter.nodeSelector | default .Values.nodeSelector) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (.Values.scouter.affinity | default .Values.affinity) }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (.Values.scouter.tolerations | default .Values.tolerations) }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -281,6 +281,51 @@ bootstrap:
   # content: |
   #   ...
 
+# Scouter Configuration
+# When enabled, deploys the scouter collector as a separate deployment from the control layer.
+# Scouter needs network access to the control-layer admin/monitoring endpoints.
+scouter:
+  enabled: false
+
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/doublewordai/scouter
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  # API keys used by scouter.
+  # Scouter always uses SYSTEM_API_KEY from the shared control-layer secret:
+  #   secrets.controlLayer.data.SYSTEM_API_KEY
+
+  service:
+    type: LoadBalancer
+    port: 4321
+
+  env: {}
+
+  resources: {}
+
+  podAnnotations: {}
+  podLabels: {}
+
+  podSecurityContext: {}
+  securityContext: {}
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  livenessProbe:
+    httpGet:
+      path: /report
+      port: http
+
+  readinessProbe:
+    httpGet:
+      path: /report
+      port: http
+
 # PostgreSQL Database Configuration
 # Set enabled: true to deploy PostgreSQL as part of this chart
 # Set enabled: false to use external PostgreSQL (configure DATABASE_URL via secrets.controlLayer.data)
