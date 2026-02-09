@@ -293,7 +293,7 @@ scouter:
   image:
     repository: ghcr.io/doublewordai/scouter
     pullPolicy: IfNotPresent
-    tag: "0.3.1"
+    tag: "latest"
 
   # API keys used by scouter.
   # Scouter always uses SYSTEM_API_KEY from the shared control-layer secret:
