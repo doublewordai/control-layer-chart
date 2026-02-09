@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/doublewordai/control-layer-chart/compare/v0.8.1...v0.9.0) (2026-02-09)
+
+
+### Features
+
+* add SYSTEM_API_KEY to secrets in values.yaml ([#53](https://github.com/doublewordai/control-layer-chart/issues/53)) ([9bf2a9d](https://github.com/doublewordai/control-layer-chart/commit/9bf2a9da0302594e38d26ce7258f2bab3d069c03))
+
 ## [0.8.1](https://github.com/doublewordai/control-layer-chart/compare/v0.8.0...v0.8.1) (2026-02-05)
 
 
