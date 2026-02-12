@@ -54,11 +54,14 @@ spec:
                   name: {{ include "control-layer.fullname" . }}-config
                   key: bootstrap.js
             {{- end }}
+<<<<<<< Updated upstream
             {{- if .Values.fusillade.enabled }}
             # Disable fusillade daemon on control-layer pods when running separately
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
               value: "never"
             {{- end }}
+=======
+>>>>>>> Stashed changes
             {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}

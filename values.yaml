@@ -166,6 +166,7 @@ config: |
   # Secret key for session signing (set via DWCTL_SECRET_KEY environment variable)
   secret_key: "your-secret-key-here"
 
+<<<<<<< Updated upstream
 # Fusillade Daemon Configuration
 # When enabled, deploys the fusillade daemon as a separate deployment from the control layer.
 # This sets background_services.batch_daemon.enabled to:
@@ -326,6 +327,11 @@ scouter:
     httpGet:
       path: /report
       port: http
+=======
+bootstrap:
+  enabled: false
+  content: ""
+>>>>>>> Stashed changes
 
 # PostgreSQL Database Configuration
 # Set enabled: true to deploy PostgreSQL as part of this chart
