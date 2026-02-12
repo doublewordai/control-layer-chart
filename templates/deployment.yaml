@@ -51,17 +51,14 @@ spec:
             - name: DASHBOARD_BOOTSTRAP_JS
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "control-layer.fullname" . }}-config
+                  name: {{ include "control-layer.fullname" . }}-dashboard-bootstrap
                   key: bootstrap.js
             {{- end }}
-<<<<<<< Updated upstream
             {{- if .Values.fusillade.enabled }}
             # Disable fusillade daemon on control-layer pods when running separately
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
               value: "never"
             {{- end }}
-=======
->>>>>>> Stashed changes
             {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}
