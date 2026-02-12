@@ -51,7 +51,7 @@ spec:
             - name: DASHBOARD_BOOTSTRAP_JS
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "control-layer.fullname" . }}-dashboard-bootstrap
+                  name: {{ include "control-layer.fullname" . }}-config
                   key: bootstrap.js
             {{- end }}
             {{- if .Values.fusillade.enabled }}
