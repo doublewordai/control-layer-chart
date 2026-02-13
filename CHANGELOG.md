@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/doublewordai/control-layer-chart/compare/v0.9.0...v0.10.0) (2026-02-13)
+
+
+### Features
+
+* simplify bootstrap defaults and add condition ([#60](https://github.com/doublewordai/control-layer-chart/issues/60)) ([10607be](https://github.com/doublewordai/control-layer-chart/commit/10607be664fa2fe3de823f213faa66d7c3aaebe6))
+
 ## [0.9.0](https://github.com/doublewordai/control-layer-chart/compare/v0.8.1...v0.9.0) (2026-02-09)
 
 
