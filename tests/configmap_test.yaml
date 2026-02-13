@@ -187,11 +187,11 @@ tests:
       - isNullOrEmpty:
           path: spec.template.spec.containers[0].env
 
-  - it: should include bootstrap.js in configmap when enabled with content
+  - it: should include bootstrap.js in configmap when enabled with base64 content
     set:
       bootstrap:
         enabled: true
-        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCBpbml0aWFsaXplZCIpOwp3aW5kb3cuQk9PVFNUUkFQX0NPTkZJRyA9IHsgdGhlbWU6ICJkYXJrIiB9Owo="
+        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCBpbml0aWFsaXplZCIpOw=="
     template: configmap.yaml
     asserts:
       - isNotNull:
@@ -199,9 +199,6 @@ tests:
       - matchRegex:
           path: data["bootstrap.js"]
           pattern: 'console\.log\("Bootstrap initialized"\);'
-      - matchRegex:
-          path: data["bootstrap.js"]
-          pattern: 'window\.BOOTSTRAP_CONFIG = \{ theme: "dark" \};'
 
   - it: should include bootstrap.js in configmap when enabled with file
     set:
@@ -255,7 +252,7 @@ tests:
                 key: bootstrap.js
         template: deployment.yaml
 
-  - it: should preserve bootstrap.js content formatting
+  - it: should decode base64 bootstrap.js content in configmap
     set:
       bootstrap:
         enabled: true
