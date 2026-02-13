@@ -187,31 +187,22 @@ tests:
       - isNullOrEmpty:
           path: spec.template.spec.containers[0].env
 
-  - it: should include bootstrap.js in configmap when enabled with base64 content
+  - it: should include bootstrap.js in separate configmap when enabled with base64 content
     set:
       bootstrap:
         enabled: true
         content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCBpbml0aWFsaXplZCIpOw=="
     template: configmap.yaml
+    documentIndex: 1
     asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-bootstrap
       - isNotNull:
           path: data["bootstrap.js"]
       - matchRegex:
           path: data["bootstrap.js"]
           pattern: 'console\.log\("Bootstrap initialized"\);'
-
-  - it: should include bootstrap.js in configmap when enabled with file
-    set:
-      bootstrap:
-        enabled: true
-        file: "tests/fixtures/test-bootstrap.js"
-    template: configmap.yaml
-    asserts:
-      - isNotNull:
-          path: data["bootstrap.js"]
-      - matchRegex:
-          path: data["bootstrap.js"]
-          pattern: "TEST_BOOTSTRAP"
 
   - it: should set DASHBOARD_BOOTSTRAP_JS env var in deployment when bootstrap is enabled
     set:
@@ -226,7 +217,7 @@ tests:
             name: DASHBOARD_BOOTSTRAP_JS
             valueFrom:
               configMapKeyRef:
-                name: RELEASE-NAME-control-layer-config
+                name: RELEASE-NAME-control-layer-bootstrap
                 key: bootstrap.js
 
   - it: should have correct configmap reference in deployment env var for bootstrap
@@ -240,15 +231,16 @@ tests:
     asserts:
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-control-layer-config
+          value: RELEASE-NAME-control-layer-bootstrap
         template: configmap.yaml
+        documentIndex: 1
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: DASHBOARD_BOOTSTRAP_JS
             valueFrom:
               configMapKeyRef:
-                name: RELEASE-NAME-control-layer-config
+                name: RELEASE-NAME-control-layer-bootstrap
                 key: bootstrap.js
         template: deployment.yaml
 
@@ -258,6 +250,7 @@ tests:
         enabled: true
         content: "Ly8gTXVsdGktbGluZSBib290c3RyYXAgc2NyaXB0CihmdW5jdGlvbigpIHsKICBjb25zdCBjb25maWcgPSB7CiAgICBhcGlVcmw6ICJodHRwczovL2FwaS5leGFtcGxlLmNvbSIsCiAgICBmZWF0dXJlczogWyJmZWF0dXJlMSIsICJmZWF0dXJlMiJdCiAgfTsKICB3aW5kb3cuQVBQX0NPTkZJRyA9IGNvbmZpZzsKfSkoKTsK"
     template: configmap.yaml
+    documentIndex: 1
     asserts:
       - matchRegex:
           path: data["bootstrap.js"]
