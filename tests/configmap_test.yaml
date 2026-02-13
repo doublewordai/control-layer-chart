@@ -187,11 +187,12 @@ tests:
       - isNullOrEmpty:
           path: spec.template.spec.containers[0].env
 
-  - it: should include bootstrap.js in separate configmap when enabled with base64 content
+  - it: should include bootstrap.js in separate configmap when enabled
     set:
       bootstrap:
         enabled: true
-        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCBpbml0aWFsaXplZCIpOw=="
+        content: |
+          console.log("Bootstrap initialized");
     template: configmap.yaml
     documentIndex: 1
     asserts:
@@ -208,7 +209,8 @@ tests:
     set:
       bootstrap:
         enabled: true
-        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCB0ZXN0Iik7Cg=="
+        content: |
+          console.log("Bootstrap test");
     template: deployment.yaml
     asserts:
       - contains:
@@ -224,7 +226,8 @@ tests:
     set:
       bootstrap:
         enabled: true
-        content: "d2luZG93LkFQUF9DT05GSUcgPSB7fTsK"
+        content: |
+          window.APP_CONFIG = {};
     templates:
       - deployment.yaml
       - configmap.yaml
@@ -244,11 +247,19 @@ tests:
                 key: bootstrap.js
         template: deployment.yaml
 
-  - it: should decode base64 bootstrap.js content in configmap
+  - it: should preserve multi-line bootstrap.js content in configmap
     set:
       bootstrap:
         enabled: true
-        content: "Ly8gTXVsdGktbGluZSBib290c3RyYXAgc2NyaXB0CihmdW5jdGlvbigpIHsKICBjb25zdCBjb25maWcgPSB7CiAgICBhcGlVcmw6ICJodHRwczovL2FwaS5leGFtcGxlLmNvbSIsCiAgICBmZWF0dXJlczogWyJmZWF0dXJlMSIsICJmZWF0dXJlMiJdCiAgfTsKICB3aW5kb3cuQVBQX0NPTkZJRyA9IGNvbmZpZzsKfSkoKTsK"
+        content: |
+          // Multi-line bootstrap script
+          (function() {
+            const config = {
+              apiUrl: "https://api.example.com",
+              features: ["feature1", "feature2"]
+            };
+            window.APP_CONFIG = config;
+          })();
     template: configmap.yaml
     documentIndex: 1
     asserts:

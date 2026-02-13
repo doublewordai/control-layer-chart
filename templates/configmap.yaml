@@ -17,5 +17,5 @@ metadata:
     {{- include "control-layer.labels" . | nindent 4 }}
 data:
   bootstrap.js: |
-    {{- .Values.bootstrap.content | b64dec | nindent 4 }}
+    {{- .Values.bootstrap.content | nindent 4 }}
 {{- end }}
