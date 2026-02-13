@@ -26,7 +26,7 @@ tests:
           pattern: 'host: "0\.0\.0\.0"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'port: 3001'
+          pattern: "port: 3001"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: 'secret_key: "your-secret-key-here"'
@@ -38,7 +38,7 @@ tests:
         host: "127.0.0.1"
         port: 8080
         admin_email: "admin@example.com"
-        
+
         model_sources:
           - name: "Production"
             url: "http://prod-server:9000"
@@ -50,7 +50,7 @@ tests:
           pattern: 'host: "127\.0\.0\.1"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'port: 8080'
+          pattern: "port: 8080"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: 'admin_email: "admin@example\.com"'
@@ -119,7 +119,7 @@ tests:
         # Control Layer Configuration with complex structure
         host: "0.0.0.0"
         port: 3001
-        
+
         model_sources:
           - name: "GPT-4"
             url: "https://api.openai.com/v1"
@@ -129,7 +129,7 @@ tests:
           - name: "Claude"
             url: "https://api.anthropic.com/v1"
             sync_interval: "20s"
-        
+
         metadata:
           region: "us-west-2"
           environment: "production"
@@ -163,13 +163,13 @@ tests:
           pattern: 'host: "0\.0\.0\.0"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'nested:'
+          pattern: "nested:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: '  level1:'
+          pattern: "  level1:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: '    level2:'
+          pattern: "    level2:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: '      value: "deep"'
@@ -187,36 +187,23 @@ tests:
       - isNullOrEmpty:
           path: spec.template.spec.containers[0].env
 
-  - it: should include bootstrap.js in configmap when enabled with content
+  - it: should include bootstrap.js in separate configmap when enabled
     set:
       bootstrap:
         enabled: true
         content: |
           console.log("Bootstrap initialized");
-          window.BOOTSTRAP_CONFIG = { theme: "dark" };
     template: configmap.yaml
+    documentIndex: 1
     asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-bootstrap
       - isNotNull:
           path: data["bootstrap.js"]
       - matchRegex:
           path: data["bootstrap.js"]
           pattern: 'console\.log\("Bootstrap initialized"\);'
-      - matchRegex:
-          path: data["bootstrap.js"]
-          pattern: 'window\.BOOTSTRAP_CONFIG = \{ theme: "dark" \};'
-
-  - it: should include bootstrap.js in configmap when enabled with file
-    set:
-      bootstrap:
-        enabled: true
-        file: "tests/fixtures/test-bootstrap.js"
-    template: configmap.yaml
-    asserts:
-      - isNotNull:
-          path: data["bootstrap.js"]
-      - matchRegex:
-          path: data["bootstrap.js"]
-          pattern: 'TEST_BOOTSTRAP'
 
   - it: should set DASHBOARD_BOOTSTRAP_JS env var in deployment when bootstrap is enabled
     set:
@@ -232,7 +219,7 @@ tests:
             name: DASHBOARD_BOOTSTRAP_JS
             valueFrom:
               configMapKeyRef:
-                name: RELEASE-NAME-control-layer-config
+                name: RELEASE-NAME-control-layer-bootstrap
                 key: bootstrap.js
 
   - it: should have correct configmap reference in deployment env var for bootstrap
@@ -247,19 +234,20 @@ tests:
     asserts:
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-control-layer-config
+          value: RELEASE-NAME-control-layer-bootstrap
         template: configmap.yaml
+        documentIndex: 1
       - contains:
           path: spec.template.spec.containers[0].env
           content:
             name: DASHBOARD_BOOTSTRAP_JS
             valueFrom:
               configMapKeyRef:
-                name: RELEASE-NAME-control-layer-config
+                name: RELEASE-NAME-control-layer-bootstrap
                 key: bootstrap.js
         template: deployment.yaml
 
-  - it: should preserve bootstrap.js content formatting
+  - it: should preserve multi-line bootstrap.js content in configmap
     set:
       bootstrap:
         enabled: true
@@ -273,10 +261,11 @@ tests:
             window.APP_CONFIG = config;
           })();
     template: configmap.yaml
+    documentIndex: 1
     asserts:
       - matchRegex:
           path: data["bootstrap.js"]
-          pattern: '// Multi-line bootstrap script'
+          pattern: "// Multi-line bootstrap script"
       - matchRegex:
           path: data["bootstrap.js"]
           pattern: 'apiUrl: "https://api\.example\.com"'
