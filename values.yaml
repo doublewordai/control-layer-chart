@@ -276,11 +276,7 @@ fusillade:
 # Bootstrap JavaScript configuration
 bootstrap:
   enabled: false
-  # You can either provide a file path (relative to chart root) or direct content
-  # file: ""
-  # Inline bootstrap JS content should be base64 encoded
-  # content: |
-  #   ...
+  content: ""
 
 # Scouter Configuration
 # When enabled, deploys the scouter collector as a separate deployment from the control layer.
