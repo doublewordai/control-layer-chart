@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/doublewordai/control-layer-chart/compare/v0.10.0...v0.10.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* decode base64 bootstrap content in configmap ([#62](https://github.com/doublewordai/control-layer-chart/issues/62)) ([92026b0](https://github.com/doublewordai/control-layer-chart/commit/92026b0c4e04a763c9e3e9bb70fc8cf05827288f))
+
 ## [0.10.0](https://github.com/doublewordai/control-layer-chart/compare/v0.9.0...v0.10.0) (2026-02-13)
 
 
