@@ -26,7 +26,7 @@ tests:
           pattern: 'host: "0\.0\.0\.0"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'port: 3001'
+          pattern: "port: 3001"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: 'secret_key: "your-secret-key-here"'
@@ -38,7 +38,7 @@ tests:
         host: "127.0.0.1"
         port: 8080
         admin_email: "admin@example.com"
-        
+
         model_sources:
           - name: "Production"
             url: "http://prod-server:9000"
@@ -50,7 +50,7 @@ tests:
           pattern: 'host: "127\.0\.0\.1"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'port: 8080'
+          pattern: "port: 8080"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: 'admin_email: "admin@example\.com"'
@@ -119,7 +119,7 @@ tests:
         # Control Layer Configuration with complex structure
         host: "0.0.0.0"
         port: 3001
-        
+
         model_sources:
           - name: "GPT-4"
             url: "https://api.openai.com/v1"
@@ -129,7 +129,7 @@ tests:
           - name: "Claude"
             url: "https://api.anthropic.com/v1"
             sync_interval: "20s"
-        
+
         metadata:
           region: "us-west-2"
           environment: "production"
@@ -163,13 +163,13 @@ tests:
           pattern: 'host: "0\.0\.0\.0"'
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: 'nested:'
+          pattern: "nested:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: '  level1:'
+          pattern: "  level1:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
-          pattern: '    level2:'
+          pattern: "    level2:"
       - matchRegex:
           path: data["control-layer-config.yaml"]
           pattern: '      value: "deep"'
@@ -191,9 +191,7 @@ tests:
     set:
       bootstrap:
         enabled: true
-        content: |
-          console.log("Bootstrap initialized");
-          window.BOOTSTRAP_CONFIG = { theme: "dark" };
+        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCBpbml0aWFsaXplZCIpOwp3aW5kb3cuQk9PVFNUUkFQX0NPTkZJRyA9IHsgdGhlbWU6ICJkYXJrIiB9Owo="
     template: configmap.yaml
     asserts:
       - isNotNull:
@@ -216,14 +214,13 @@ tests:
           path: data["bootstrap.js"]
       - matchRegex:
           path: data["bootstrap.js"]
-          pattern: 'TEST_BOOTSTRAP'
+          pattern: "TEST_BOOTSTRAP"
 
   - it: should set DASHBOARD_BOOTSTRAP_JS env var in deployment when bootstrap is enabled
     set:
       bootstrap:
         enabled: true
-        content: |
-          console.log("Bootstrap test");
+        content: "Y29uc29sZS5sb2coIkJvb3RzdHJhcCB0ZXN0Iik7Cg=="
     template: deployment.yaml
     asserts:
       - contains:
@@ -239,8 +236,7 @@ tests:
     set:
       bootstrap:
         enabled: true
-        content: |
-          window.APP_CONFIG = {};
+        content: "d2luZG93LkFQUF9DT05GSUcgPSB7fTsK"
     templates:
       - deployment.yaml
       - configmap.yaml
@@ -263,20 +259,12 @@ tests:
     set:
       bootstrap:
         enabled: true
-        content: |
-          // Multi-line bootstrap script
-          (function() {
-            const config = {
-              apiUrl: "https://api.example.com",
-              features: ["feature1", "feature2"]
-            };
-            window.APP_CONFIG = config;
-          })();
+        content: "Ly8gTXVsdGktbGluZSBib290c3RyYXAgc2NyaXB0CihmdW5jdGlvbigpIHsKICBjb25zdCBjb25maWcgPSB7CiAgICBhcGlVcmw6ICJodHRwczovL2FwaS5leGFtcGxlLmNvbSIsCiAgICBmZWF0dXJlczogWyJmZWF0dXJlMSIsICJmZWF0dXJlMiJdCiAgfTsKICB3aW5kb3cuQVBQX0NPTkZJRyA9IGNvbmZpZzsKfSkoKTsK"
     template: configmap.yaml
     asserts:
       - matchRegex:
           path: data["bootstrap.js"]
-          pattern: '// Multi-line bootstrap script'
+          pattern: "// Multi-line bootstrap script"
       - matchRegex:
           path: data["bootstrap.js"]
           pattern: 'apiUrl: "https://api\.example\.com"'

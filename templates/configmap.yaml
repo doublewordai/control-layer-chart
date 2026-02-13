@@ -12,6 +12,6 @@ data:
     {{- if $.Values.bootstrap.file }}
     {{- $.Files.Get .Values.bootstrap.file | nindent 4 }}
     {{- else }}
-    {{- .Values.bootstrap.content | nindent 4 }}
+    {{- .Values.bootstrap.content | b64dec | nindent 4 }}
     {{- end }}
   {{- end }}
