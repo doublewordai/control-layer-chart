@@ -86,6 +86,11 @@ spec:
               mountPath: /app/config.yaml
               subPath: control-layer-config.yaml
               readOnly: true
+            {{- if .Values.emailTemplates.enabled }}
+            - name: email-templates
+              mountPath: {{ .Values.emailTemplates.mountPath }}
+              readOnly: true
+            {{- end }}
             {{- with .Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -93,6 +98,11 @@ spec:
         - name: config
           configMap:
             name: {{ include "control-layer.fullname" . }}-config
+        {{- if .Values.emailTemplates.enabled }}
+        - name: email-templates
+          configMap:
+            name: {{ include "control-layer.fullname" . }}-email-templates
+        {{- end }}
         {{- with .Values.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

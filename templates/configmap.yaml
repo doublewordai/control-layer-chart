@@ -19,3 +19,17 @@ data:
   bootstrap.js: |
     {{- .Values.bootstrap.content | nindent 4 }}
 {{- end }}
+{{- if .Values.emailTemplates.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-layer.fullname" . }}-email-templates
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+data:
+  {{- range $name, $content := .Values.emailTemplates.files }}
+  {{ $name }}: |
+    {{- $content | nindent 4 }}
+  {{- end }}
+{{- end }}
