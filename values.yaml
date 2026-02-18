@@ -278,6 +278,16 @@ bootstrap:
   enabled: false
   content: ""
 
+# Email templates configuration
+# Files are mounted as a directory into the container
+emailTemplates:
+  enabled: false
+  mountPath: /app/email-templates
+  files: {}
+  # files:
+  #   batch_complete.html: "<html>...</html>"
+  #   first_batch.html: "<html>...</html>"
+
 # Scouter Configuration
 # When enabled, deploys the scouter collector as a separate deployment from the control layer.
 # Scouter needs network access to the control-layer admin/monitoring endpoints.
