@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/doublewordai/control-layer-chart/compare/v0.10.1...v0.11.0) (2026-02-18)
+
+
+### Features
+
+* allow emailTemplates configuration ([#64](https://github.com/doublewordai/control-layer-chart/issues/64)) ([2e87c71](https://github.com/doublewordai/control-layer-chart/commit/2e87c715a71c34de9530d59f0cba0c2361c19be2))
+
 ## [0.10.1](https://github.com/doublewordai/control-layer-chart/compare/v0.10.0...v0.10.1) (2026-02-13)
 
 
