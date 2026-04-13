@@ -138,21 +138,6 @@ When `fusillade.enabled: true`:
 - The control layer pods will have `background_services.batch_daemon.enabled` set to `never`
 - The fusillade pods will have `background_services.batch_daemon.enabled` set to `always`
 
-### Scouter Configuration
-
-Scouter is a capacity reporting service that polls the control-layer admin/monitoring endpoints (e.g. `/admin/api/v1/models` and `/admin/api/v1/monitoring/pending-request-counts`) and exposes a `/report` endpoint.
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `scouter.enabled` | Deploy scouter as a separate deployment | `false` |
-| `scouter.replicaCount` | Number of scouter replicas | `1` |
-| `scouter.image.repository` | Scouter image repository | `ghcr.io/doublewordai/scouter` |
-| `scouter.image.tag` | Scouter image tag | `latest` |
-| `scouter.service.type` | Scouter service type | `LoadBalancer` |
-| `scouter.service.port` | Scouter HTTP port | `4321` |
-| `secrets.controlLayer.data.SYSTEM_API_KEY` | Shared API key used by control-layer and scouter | `""` |
-| `scouter.env` | Additional env vars | `{}` |
-
 ## Example Configurations
 
 ### With External Database
