@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0](https://github.com/doublewordai/control-layer-chart/compare/v0.11.0...v1.0.0) (2026-04-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* the `scouter.*` values keys are no longer rendered. Consumers relying on the embedded scouter must deploy scouter separately (the chart lives at
+
+### Features
+
+* remove scouter sub-chart ([#70](https://github.com/doublewordai/control-layer-chart/issues/70)) ([ddb06d4](https://github.com/doublewordai/control-layer-chart/commit/ddb06d4f7c67ed46e91d571e8e41557239c9a625))
+
+
+### Bug Fixes
+
+* **chart:** roll pods when mounted Secret/ConfigMap changes ([#71](https://github.com/doublewordai/control-layer-chart/issues/71)) ([e49a923](https://github.com/doublewordai/control-layer-chart/commit/e49a92322b12a31ab0373a2a8aae56246995f5b4))
+
 ## [0.11.0](https://github.com/doublewordai/control-layer-chart/compare/v0.10.1...v0.11.0) (2026-02-18)
 
 
