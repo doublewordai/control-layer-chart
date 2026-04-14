@@ -1,8 +1,11 @@
 suite: test fusillade deployment
 templates:
   - fusillade/deployment.yaml
+  - configmap.yaml
+  - secret.yaml
 tests:
   - it: should not create fusillade deployment when disabled
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: false
     asserts:
@@ -10,6 +13,7 @@ tests:
           count: 0
 
   - it: should create fusillade deployment when enabled
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
     asserts:
@@ -26,6 +30,7 @@ tests:
           value: fusillade
 
   - it: should always enable batch daemon via env var
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
     asserts:
@@ -36,6 +41,7 @@ tests:
             value: "always"
 
   - it: should set database pool env vars when fusillade.database.pool is configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.pool.max_connections: 100
@@ -53,6 +59,7 @@ tests:
             value: "5"
 
   - it: should set replica pool env vars when fusillade.database.replica_pool is configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.replica_pool.max_connections: 200
@@ -70,6 +77,7 @@ tests:
             value: "10"
 
   - it: should set fusillade schema pool env vars when configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.fusillade_pool.max_connections: 500
@@ -87,6 +95,7 @@ tests:
             value: "1"
 
   - it: should set fusillade replica pool env vars when configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.fusillade_replica_pool.max_connections: 300
@@ -98,6 +107,7 @@ tests:
             value: "300"
 
   - it: should set outlet pool env vars when configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.outlet_pool.max_connections: 150
@@ -115,6 +125,7 @@ tests:
             value: "150"
 
   - it: should set all pool settings together
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
       fusillade.database.pool.max_connections: 100
@@ -156,6 +167,7 @@ tests:
             value: "200"
 
   - it: should not set database pool env vars when not configured
+    template: fusillade/deployment.yaml
     set:
       fusillade.enabled: true
     asserts:

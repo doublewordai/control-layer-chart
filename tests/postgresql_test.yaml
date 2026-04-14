@@ -1,8 +1,10 @@
 suite: test postgresql statefulset configuration
 templates:
   - postgres/statefulset.yaml
+  - postgres/secret.yaml
 tests:
   - it: should not create statefulset when postgresql is disabled
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: false
     asserts:
@@ -10,6 +12,7 @@ tests:
           count: 0
 
   - it: should create statefulset with default configuration
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       secrets.postgres.create: true
@@ -33,6 +36,7 @@ tests:
           value: "postgres:15"
 
   - it: should use custom image configuration when specified
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.image.repository: "custom-postgres"
@@ -48,6 +52,7 @@ tests:
           value: "Always"
 
   - it: should configure environment variables from secrets
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       secrets.postgres.create: true
@@ -83,6 +88,7 @@ tests:
             value: "/var/lib/postgresql/data/pgdata"
 
   - it: should configure volume mounts
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       secrets.postgres.create: true
@@ -94,6 +100,7 @@ tests:
             mountPath: /var/lib/postgresql/data
 
   - it: should configure probes correctly
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       secrets.postgres.create: true
@@ -118,6 +125,7 @@ tests:
           value: 5
 
   - it: should create persistent volume claim template when persistence enabled
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.persistence.enabled: true
@@ -141,6 +149,7 @@ tests:
           content: "ReadWriteOnce"
 
   - it: should use emptyDir when persistence is disabled
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.persistence.enabled: false
@@ -155,6 +164,7 @@ tests:
             emptyDir: {}
 
   - it: should configure security contexts
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.podSecurityContext.fsGroup: 999
@@ -177,6 +187,7 @@ tests:
           value: true
 
   - it: should configure resources when specified
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.resources.limits.cpu: "500m"
@@ -199,6 +210,7 @@ tests:
           value: "256Mi"
 
   - it: should configure replica count
+    template: postgres/statefulset.yaml
     set:
       postgresql.enabled: true
       postgresql.replicaCount: 3

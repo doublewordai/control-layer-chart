@@ -13,10 +13,11 @@ spec:
       {{- include "control-layer.postgres.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.postgresql.podAnnotations }}
       annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/postgres/secret.yaml") . | sha256sum }}
+        {{- with .Values.postgresql.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       labels:
         {{- include "control-layer.postgres.labels" . | nindent 8 }}
         {{- with .Values.postgresql.podLabels }}

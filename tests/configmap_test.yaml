@@ -2,6 +2,7 @@ suite: test configmap generation and mounting
 templates:
   - configmap.yaml
   - deployment.yaml
+  - secret.yaml
 tests:
   # ConfigMap Creation Tests
   - it: should create control-layer configmap with default configuration
