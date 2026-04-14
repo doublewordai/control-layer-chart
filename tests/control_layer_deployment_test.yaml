@@ -1,8 +1,11 @@
 suite: test control-layer deployment
 templates:
   - deployment.yaml
+  - configmap.yaml
+  - secret.yaml
 tests:
   - it: should create control-layer deployment with default appVersion
+    template: deployment.yaml
     asserts:
       - isKind:
           of: Deployment
@@ -20,6 +23,7 @@ tests:
           value: 1
 
   - it: should use custom image tag when specified
+    template: deployment.yaml
     set:
       image.tag: "custom-tag"
     asserts:
@@ -28,6 +32,7 @@ tests:
           value: ghcr.io/doublewordai/control-layer:custom-tag
 
   - it: should mount config and use secrets when enabled
+    template: deployment.yaml
     set:
       secrets.controlLayer.data.DATABASE_URL: "postgres://test"
     asserts:
@@ -51,6 +56,7 @@ tests:
               name: RELEASE-NAME-control-layer-secret
 
   - it: should use correct labels and selectors
+    template: deployment.yaml
     asserts:
       - equal:
           path: metadata.labels["app.kubernetes.io/component"]
