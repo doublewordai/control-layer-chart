@@ -15,7 +15,17 @@ serviceAccount:
   create: true
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
-  # Annotations to add to the service account
+  # Annotations to add to the service account.
+  #
+  # For GKE Workload Identity (used when the image normaliser writes
+  # objects to a GCS bucket), bind a GCP service account here:
+  #
+  #   annotations:
+  #     iam.gke.io/gcp-service-account: <name>@<project>.iam.gserviceaccount.com
+  #
+  # The bound GCP service account needs `roles/storage.objectAdmin` on the
+  # image-normaliser bucket and `roles/iam.serviceAccountTokenCreator` on
+  # itself (to call signBlob for V4 signed URLs).
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
@@ -328,3 +338,30 @@ postgresql:
     runAsGroup: 999
     # Security best practice - prevent running as root
     runAsNonRoot: true
+
+# ---------------------------------------------------------------------------
+# Egress NetworkPolicy for the control-layer pod.
+#
+# Disabled by default. When enabled, restricts the control-layer pod's
+# outbound traffic so it cannot reach private / loopback / link-local
+# ranges or in-cluster service CIDRs. Public-internet egress (provider
+# APIs, external Postgres, object storage) is preserved.
+#
+# This is the application-layer backstop for the hardened image fetcher:
+# even if a bug in the in-process IP allow-list let a request through,
+# the kernel-level network policy refuses the packet.
+#
+# Operators MUST set `clusterCidrs` for their cluster — typically the
+# Pod CIDR and the Service CIDR. Misconfiguring this can break in-pod
+# DNS resolution if `kube-dns` isn't allowed; the template emits an
+# explicit `kube-dns` allow rule for that reason.
+#
+# Requires a NetworkPolicy-aware CNI (Cilium, Calico, GKE Dataplane V2).
+networkPolicy:
+  enabled: false
+  # Cluster pod/service CIDRs to deny egress to. Override per cluster.
+  # Typical GKE defaults are 10.0.0.0/8 covering both.
+  clusterCidrs:
+    - 10.0.0.0/8
+  # Allow egress to kube-dns. Disable only if you know what you're doing.
+  allowKubeDns: true

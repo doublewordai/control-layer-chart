@@ -1,0 +1,65 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "control-layer.fullname" . }}-egress
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "control-layer.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: control-layer
+  policyTypes:
+    - Egress
+  egress:
+    # Egress to the public internet, with private / loopback / link-local
+    # / CGNAT / IPv6 ULA + LL ranges excluded. This is the application-layer
+    # backstop for the in-process image fetcher's IP allow-list: even if a
+    # bug let a request through the deny-list inside the process, the CNI
+    # refuses the packet.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              # RFC1918 private ranges
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              # Loopback
+              - 127.0.0.0/8
+              # Link-local — covers GCE / AWS metadata at 169.254.169.254
+              - 169.254.0.0/16
+              # Carrier-grade NAT (RFC 6598)
+              - 100.64.0.0/10
+              # In-cluster Pod / Service CIDRs (operator-configured)
+              {{- range .Values.networkPolicy.clusterCidrs }}
+              - {{ . }}
+              {{- end }}
+        - ipBlock:
+            cidr: ::/0
+            except:
+              # IPv6 loopback
+              - ::1/128
+              # IPv6 unique-local (RFC 4193)
+              - fc00::/7
+              # IPv6 link-local
+              - fe80::/10
+  {{- if .Values.networkPolicy.allowKubeDns }}
+    # DNS is required for any outbound resolution. Without this rule, the
+    # cluster-CIDR deny above blocks queries to kube-dns and breaks all
+    # name lookups inside the pod.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+  {{- end }}
+{{- end }}
