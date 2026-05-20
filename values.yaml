@@ -26,6 +26,12 @@ serviceAccount:
   # The bound GCP service account needs `roles/storage.objectAdmin` on the
   # image-normaliser bucket and `roles/iam.serviceAccountTokenCreator` on
   # itself (to call signBlob for V4 signed URLs).
+  #
+  # Bucket lifetime: dwctl does NOT garbage-collect normaliser objects.
+  # Configure an Object Lifecycle Management rule on the bucket itself
+  # (Terraform / gcloud) to delete objects after enough days to outlive
+  # the longest possible batch dispatch window. Example: 7d (covers a
+  # 24h batch completion window + a 6d investigation buffer).
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
