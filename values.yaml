@@ -357,17 +357,26 @@ postgresql:
 # even if a bug in the in-process IP allow-list let a request through,
 # the kernel-level network policy refuses the packet.
 #
-# Operators MUST set `clusterCidrs` for their cluster — typically the
-# Pod CIDR and the Service CIDR. Misconfiguring this can break in-pod
-# DNS resolution if `kube-dns` isn't allowed; the template emits an
-# explicit `kube-dns` allow rule for that reason.
+# The template ALREADY denies RFC1918 (10.0.0.0/8, 172.16/12, 192.168/16),
+# loopback, link-local, CGNAT, and IPv6 ULA/LL ranges. `clusterCidrs`
+# is only needed if your cluster uses Pod or Service CIDRs OUTSIDE
+# those ranges (e.g. dual-stack with public IPv6, custom CIDR plans).
+#
+# For standard GKE clusters (default Pod CIDR 10.x and Service CIDR
+# 10.x), the hardcoded RFC1918 block already covers them — leave the
+# default empty list and nothing additional is denied.
+#
+# Misconfiguring this can break in-pod DNS resolution if `kube-dns`
+# isn't allowed; the template emits an explicit `kube-dns` allow rule
+# regardless of which CIDRs you set.
 #
 # Requires a NetworkPolicy-aware CNI (Cilium, Calico, GKE Dataplane V2).
 networkPolicy:
   enabled: false
-  # Cluster pod/service CIDRs to deny egress to. Override per cluster.
-  # Typical GKE defaults are 10.0.0.0/8 covering both.
-  clusterCidrs:
-    - 10.0.0.0/8
+  # Additional CIDRs to deny egress to, ON TOP OF the hardcoded RFC1918
+  # / loopback / link-local / CGNAT / IPv6-ULA-LL exceptions. Empty by
+  # default — standard clusters using RFC1918 Pod/Service ranges need
+  # nothing here. Set explicitly only for non-RFC1918 cluster CIDRs.
+  clusterCidrs: []
   # Allow egress to kube-dns. Disable only if you know what you're doing.
   allowKubeDns: true
