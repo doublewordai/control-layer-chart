@@ -379,4 +379,15 @@ networkPolicy:
   # nothing here. Set explicitly only for non-RFC1918 cluster CIDRs.
   clusterCidrs: []
   # Allow egress to kube-dns. Disable only if you know what you're doing.
+  #
+  # NOTE on non-standard DNS deployments: the template selects DNS pods
+  # using `namespace=kube-system, podSelector k8s-app=kube-dns`, which
+  # matches vanilla Kubernetes (and CoreDNS on most distros). If your
+  # cluster runs DNS under different labels — e.g. OpenShift uses
+  # `dns.operator.openshift.io/daemonset-dns=default` in the
+  # `openshift-dns` namespace, and some managed offerings use other
+  # combinations — the rule will not match and in-pod DNS resolution
+  # will break when networkPolicy is enabled. In that case either
+  # disable this rule (and add an equivalent NetworkPolicy out-of-band)
+  # or fork the chart with the right selector for your distribution.
   allowKubeDns: true
