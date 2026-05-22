@@ -357,6 +357,15 @@ postgresql:
 # even if a bug in the in-process IP allow-list let a request through,
 # the kernel-level network policy refuses the packet.
 #
+# ⚠️ INCOMPATIBLE WITH IN-CLUSTER POSTGRES. Because the policy denies
+# RFC1918 egress, enabling it while `postgresql.enabled: true` will
+# block the control-layer pod from reaching the in-cluster Postgres
+# StatefulSet (its Pod IP and ClusterIP are RFC1918) — startup will
+# fail immediately with connection errors. This NetworkPolicy is
+# intended for deployments using EXTERNAL managed Postgres (e.g. Neon)
+# and public-internet provider APIs. If you must run both, add an
+# explicit allow rule for your Postgres CIDR out-of-band.
+#
 # The template ALREADY denies RFC1918 (10.0.0.0/8, 172.16/12, 192.168/16),
 # loopback, link-local, CGNAT, and IPv6 ULA/LL ranges. `clusterCidrs`
 # is only needed if your cluster uses Pod or Service CIDRs OUTSIDE
