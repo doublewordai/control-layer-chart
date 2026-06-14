@@ -15,7 +15,23 @@ serviceAccount:
   create: true
   # Automatically mount a ServiceAccount's API credentials?
   automount: true
-  # Annotations to add to the service account
+  # Annotations to add to the service account.
+  #
+  # For GKE Workload Identity (used when the image normaliser writes
+  # objects to a GCS bucket), bind a GCP service account here:
+  #
+  #   annotations:
+  #     iam.gke.io/gcp-service-account: <name>@<project>.iam.gserviceaccount.com
+  #
+  # The bound GCP service account needs `roles/storage.objectAdmin` on the
+  # image-normaliser bucket and `roles/iam.serviceAccountTokenCreator` on
+  # itself (to call signBlob for V4 signed URLs).
+  #
+  # Bucket lifetime: dwctl does NOT garbage-collect normaliser objects.
+  # Configure an Object Lifecycle Management rule on the bucket itself
+  # (Terraform / gcloud) to delete objects after enough days to outlive
+  # the longest possible batch dispatch window. Example: 7d (covers a
+  # 24h batch completion window + a 6d investigation buffer).
   annotations: {}
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
@@ -328,3 +344,59 @@ postgresql:
     runAsGroup: 999
     # Security best practice - prevent running as root
     runAsNonRoot: true
+
+# ---------------------------------------------------------------------------
+# Egress NetworkPolicy for the control-layer pod.
+#
+# Disabled by default. When enabled, restricts the control-layer pod's
+# outbound traffic so it cannot reach private / loopback / link-local
+# ranges or in-cluster service CIDRs. Public-internet egress (provider
+# APIs, external Postgres, object storage) is preserved.
+#
+# This is the application-layer backstop for the hardened image fetcher:
+# even if a bug in the in-process IP allow-list let a request through,
+# the kernel-level network policy refuses the packet.
+#
+# ⚠️ INCOMPATIBLE WITH IN-CLUSTER POSTGRES. Because the policy denies
+# RFC1918 egress, enabling it while `postgresql.enabled: true` will
+# block the control-layer pod from reaching the in-cluster Postgres
+# StatefulSet (its Pod IP and ClusterIP are RFC1918) — startup will
+# fail immediately with connection errors. This NetworkPolicy is
+# intended for deployments using EXTERNAL managed Postgres (e.g. Neon)
+# and public-internet provider APIs. If you must run both, add an
+# explicit allow rule for your Postgres CIDR out-of-band.
+#
+# The template ALREADY denies RFC1918 (10.0.0.0/8, 172.16/12, 192.168/16),
+# loopback, link-local, CGNAT, and IPv6 ULA/LL ranges. `clusterCidrs`
+# is only needed if your cluster uses Pod or Service CIDRs OUTSIDE
+# those ranges (e.g. dual-stack with public IPv6, custom CIDR plans).
+#
+# For standard GKE clusters (default Pod CIDR 10.x and Service CIDR
+# 10.x), the hardcoded RFC1918 block already covers them — leave the
+# default empty list and nothing additional is denied.
+#
+# Misconfiguring this can break in-pod DNS resolution if `kube-dns`
+# isn't allowed; the template emits an explicit `kube-dns` allow rule
+# regardless of which CIDRs you set.
+#
+# Requires a NetworkPolicy-aware CNI (Cilium, Calico, GKE Dataplane V2).
+networkPolicy:
+  enabled: false
+  # Additional CIDRs to deny egress to, ON TOP OF the hardcoded RFC1918
+  # / loopback / link-local / CGNAT / IPv6-ULA-LL exceptions. Empty by
+  # default — standard clusters using RFC1918 Pod/Service ranges need
+  # nothing here. Set explicitly only for non-RFC1918 cluster CIDRs.
+  clusterCidrs: []
+  # Allow egress to kube-dns. Disable only if you know what you're doing.
+  #
+  # NOTE on non-standard DNS deployments: the template selects DNS pods
+  # using `namespace=kube-system, podSelector k8s-app=kube-dns`, which
+  # matches vanilla Kubernetes (and CoreDNS on most distros). If your
+  # cluster runs DNS under different labels — e.g. OpenShift uses
+  # `dns.operator.openshift.io/daemonset-dns=default` in the
+  # `openshift-dns` namespace, and some managed offerings use other
+  # combinations — the rule will not match and in-pod DNS resolution
+  # will break when networkPolicy is enabled. In that case either
+  # disable this rule (and add an equivalent NetworkPolicy out-of-band)
+  # or fork the chart with the right selector for your distribution.
+  allowKubeDns: true
