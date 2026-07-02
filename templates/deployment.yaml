@@ -61,6 +61,18 @@ spec:
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
               value: "never"
             {{- end }}
+            {{- if .Values.keystore.enabled }}
+            # ZDR keystore wiring. redis_url always points at the in-cluster
+            # keystore Service; current_wrap_key_id comes from values. The wrap
+            # key(s) themselves are the only piece the operator supplies as a
+            # secret (secrets.controlLayer.data: DWCTL_KEYSTORE__WRAP_KEYS__<ID>).
+            # default_ttl_seconds defaults in dwctl; override it in the `config`
+            # blob if needed.
+            - name: DWCTL_KEYSTORE__REDIS_URL
+              value: "redis://{{ include "control-layer.fullname" . }}-keystore:6379"
+            - name: DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID
+              value: {{ .Values.keystore.currentWrapKeyId | quote }}
+            {{- end }}
             {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}
