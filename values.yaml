@@ -35,8 +35,10 @@ secrets:
       #DWCTL_PAYMENT__STRIPE__WEBHOOK_SECRET:
       #DWCTL_PAYMENT__STRIPE__PRICE_ID:
       # ZDR keystore wrap key(s). One entry per key id; the id (uppercased) is
-      # the env suffix and must match keystore.current_wrap_key_id in the config
-      # blob (lowercased). Keep retired ids for one TTL during rotation (see the
+      # the env suffix (DWCTL_KEYSTORE__WRAP_KEYS__<ID>) and must match
+      # keystore.currentWrapKeyId below, which the chart injects as
+      # DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID (dwctl matches the two case-
+      # insensitively). Keep retired ids for one TTL during rotation (see the
       # plan's "Wrap-key rotation"). Each value is a strong random passphrase run
       # through dwctl's KDF. Only needed when keystore.enabled is true.
       #DWCTL_KEYSTORE__WRAP_KEYS__K1: "a-strong-random-passphrase"
