@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/doublewordai/control-layer-chart/compare/v1.0.0...v1.1.0) (2026-07-03)
+
+
+### Features
+
+* add ZDR keystore (Redis) and wrap-key wiring ([#79](https://github.com/doublewordai/control-layer-chart/issues/79)) ([4a66486](https://github.com/doublewordai/control-layer-chart/commit/4a66486ac189e08587d406207c4b1fcf521635e5))
+
 ## [1.0.0](https://github.com/doublewordai/control-layer-chart/compare/v0.11.0...v1.0.0) (2026-04-14)
 
 
