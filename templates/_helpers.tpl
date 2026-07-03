@@ -105,3 +105,25 @@ app.kubernetes.io/name: {{ include "control-layer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: fusillade
 {{- end }}
+
+{{/*
+Common labels for keystore (ZDR key custody Redis)
+*/}}
+{{- define "control-layer.keystore.labels" -}}
+helm.sh/chart: {{ include "control-layer.chart" . }}
+{{ include "control-layer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: keystore
+{{- end }}
+
+{{/*
+Selector labels for keystore
+*/}}
+{{- define "control-layer.keystore.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: keystore
+{{- end }}

@@ -1,0 +1,113 @@
+{{- if .Values.keystore.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "control-layer.fullname" . }}-keystore
+  labels:
+    {{- include "control-layer.keystore.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "control-layer.fullname" . }}-keystore
+  # Single instance by design: the keystore is a strongly-consistent custody
+  # store for short-lived keys, not a cache. Do not scale this up.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "control-layer.keystore.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.keystore.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "control-layer.keystore.labels" . | nindent 8 }}
+        {{- with .Values.keystore.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
+      {{- with .Values.keystore.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: keystore
+          {{- with .Values.keystore.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.keystore.image.repository }}:{{ .Values.keystore.image.tag }}"
+          imagePullPolicy: {{ .Values.keystore.image.pullPolicy }}
+          # Append-only file on: keys (with their absolute TTLs) survive a
+          # restart or reschedule, so the crypto-shred clock is not reset. Data
+          # dir is the persisted volume mounted below.
+          args:
+            - "--appendonly"
+            - "yes"
+            - "--dir"
+            - "/data"
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          volumeMounts:
+            - name: keystore-data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- with .Values.keystore.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.keystore.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keystore.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keystore.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.keystore.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: keystore-data
+        {{- with .Values.keystore.persistence.annotations }}
+        # IMPORTANT: this volume must be excluded from off-cluster backups, or
+        # keys could be resurrected past their TTL and break the erasure
+        # guarantee. Set the exclusion annotation for your backup tooling here.
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- range .Values.keystore.persistence.accessModes }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- if .Values.keystore.persistence.storageClass }}
+        storageClassName: {{ .Values.keystore.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.keystore.persistence.size | quote }}
+  {{- else }}
+      volumes:
+        - name: keystore-data
+          emptyDir: {}
+  {{- end }}
+{{- end }}

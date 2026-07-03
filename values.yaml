@@ -34,6 +34,14 @@ secrets:
       #DWCTL_PAYMENT__STRIPE__API_KEY:
       #DWCTL_PAYMENT__STRIPE__WEBHOOK_SECRET:
       #DWCTL_PAYMENT__STRIPE__PRICE_ID:
+      # ZDR keystore wrap key(s). One entry per key id; the id (uppercased) is
+      # the env suffix (DWCTL_KEYSTORE__WRAP_KEYS__<ID>) and must match
+      # keystore.currentWrapKeyId below, which the chart injects as
+      # DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID (dwctl matches the two case-
+      # insensitively). Keep retired ids for one TTL during rotation (see the
+      # plan's "Wrap-key rotation"). Each value is a strong random passphrase run
+      # through dwctl's KDF. Only needed when keystore.enabled is true.
+      #DWCTL_KEYSTORE__WRAP_KEYS__K1: "a-strong-random-passphrase"
 
   # PostgreSQL database credentials (used if postgresql.enabled is true)
   postgres:
@@ -165,6 +173,15 @@ config: |
 
   # Secret key for session signing (set via DWCTL_SECRET_KEY environment variable)
   secret_key: "your-secret-key-here"
+
+  # ZDR keystore: nothing is needed here for a default setup. redis_url and
+  # current_wrap_key_id are injected via env (from keystore.* values), the wrap
+  # key(s) come from secrets.controlLayer.data, and default_ttl_seconds defaults
+  # to 7200s in dwctl. Uncomment only to override the TTL:
+  # keystore:
+  #   # Set above the longest flex completion window plus a retrieval grace, or
+  #   # in-flight requests self-destruct before they are processed.
+  #   default_ttl_seconds: 7200
 
 # Fusillade Daemon Configuration
 # When enabled, deploys the fusillade daemon as a separate deployment from the control layer.
@@ -328,3 +345,76 @@ postgresql:
     runAsGroup: 999
     # Security best practice - prevent running as root
     runAsNonRoot: true
+
+# ZDR keystore: a single-instance Redis holding the short-lived per-request keys
+# that decrypt zero-data-retention flex request/response bodies. The bodies are
+# stored encrypted in Postgres; the keys live here with a TTL, so a body becomes
+# permanently unreadable once its key is deleted (on retrieval) or expires
+# (crypto-shred). See zdr-flex-encryption-plan.md.
+#
+# To turn ZDR on:
+#   1. keystore.enabled: true (deploys this Redis and points dwctl at it)
+#   2. add the wrap key(s) to secrets.controlLayer.data as
+#      DWCTL_KEYSTORE__WRAP_KEYS__<ID> (see that section), and point
+#      keystore.currentWrapKeyId at the matching id
+#   3. an admin sets zero_data_retention on each target account (dashboard/admin
+#      API). Enablement is per-account, NOT an env flag - there is no
+#      DWCTL_ZDR_ALL_FLEX (setting it crashes the pod). Do steps 1-2 and verify
+#      the keystore is running BEFORE flagging any account, or that account's flex
+#      requests fail closed with a 500. Flagging also makes that account's realtime
+#      requests non-persist and rejects realtime + server-side tools.
+# redis_url and current_wrap_key_id are injected via env automatically; the TTL
+# defaults in dwctl (override in the `config` blob if needed).
+keystore:
+  # Deploy the internal keystore Redis StatefulSet. Off by default; when false,
+  # ZDR is inactive and flex bodies are stored in plaintext as before.
+  enabled: false
+
+  # Which wrap key seals new values. Must match a key id in
+  # secrets.controlLayer.data (uppercased there as DWCTL_KEYSTORE__WRAP_KEYS__K1,
+  # so this is "k1"). Injected into dwctl via env, so no config-blob edit needed.
+  currentWrapKeyId: "k1"
+
+  # TTL (seconds) applied to both per-request keys, measured from submit. Unset
+  # leaves dwctl's default (7200 = 2h). Set it above the longest flex completion
+  # window plus a retrieval grace, or in-flight requests self-destruct before
+  # they are processed. Injected into dwctl via env when set.
+  # defaultTtlSeconds: 7200
+
+  image:
+    repository: redis
+    pullPolicy: IfNotPresent
+    tag: "7.4"
+
+  # Data persistence (append-only file). Keys and their absolute TTLs survive a
+  # pod restart or reschedule, so the crypto-shred clock is not reset.
+  persistence:
+    # Set to false for ephemeral storage. NOT recommended: a reschedule would
+    # drop every in-flight key and fail those requests.
+    enabled: true
+    # Leave empty to use the cluster default storage class.
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    # CRITICAL: exclude this volume from off-cluster backups, or keys could be
+    # resurrected past their TTL and break the erasure guarantee. Set the
+    # exclusion annotation for your backup tooling. Example for Velero:
+    annotations: {}
+    #  backup.velero.io/backup-volumes-excludes: keystore-data
+
+  resources: {}
+
+  # Redis official image runs as uid/gid 999.
+  podSecurityContext:
+    fsGroup: 999
+  securityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    runAsNonRoot: true
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: {}
