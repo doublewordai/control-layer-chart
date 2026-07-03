@@ -375,6 +375,12 @@ keystore:
   # so this is "k1"). Injected into dwctl via env, so no config-blob edit needed.
   currentWrapKeyId: "k1"
 
+  # TTL (seconds) applied to both per-request keys, measured from submit. Unset
+  # leaves dwctl's default (7200 = 2h). Set it above the longest flex completion
+  # window plus a retrieval grace, or in-flight requests self-destruct before
+  # they are processed. Injected into dwctl via env when set.
+  # defaultTtlSeconds: 7200
+
   image:
     repository: redis
     pullPolicy: IfNotPresent

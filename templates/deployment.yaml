@@ -66,12 +66,16 @@ spec:
             # keystore Service; current_wrap_key_id comes from values. The wrap
             # key(s) themselves are the only piece the operator supplies as a
             # secret (secrets.controlLayer.data: DWCTL_KEYSTORE__WRAP_KEYS__<ID>).
-            # default_ttl_seconds defaults in dwctl; override it in the `config`
-            # blob if needed.
+            # default_ttl_seconds defaults in dwctl (7200s); set
+            # keystore.defaultTtlSeconds to override it.
             - name: DWCTL_KEYSTORE__REDIS_URL
               value: "redis://{{ include "control-layer.fullname" . }}-keystore:6379"
             - name: DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID
               value: {{ .Values.keystore.currentWrapKeyId | quote }}
+            {{- with .Values.keystore.defaultTtlSeconds }}
+            - name: DWCTL_KEYSTORE__DEFAULT_TTL_SECONDS
+              value: {{ . | quote }}
+            {{- end }}
             {{- end }}
             {{- with .Values.env }}
             {{- range $key, $value := . }}
