@@ -127,3 +127,28 @@ app.kubernetes.io/name: {{ include "control-layer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: keystore
 {{- end }}
+
+{{/*
+ZDR keystore env wiring, shared by the control-layer and fusillade Deployments so
+the two cannot drift. The fusillade daemon is what encrypts flex bodies, so it
+needs the keystore env just as much as the API pods do. Callers guard on
+.Values.keystore.enabled and set indentation, e.g.:
+  {{- if .Values.keystore.enabled }}
+  {{- include "control-layer.keystoreEnv" . | nindent 12 }}
+  {{- end }}
+redis_url always targets the in-cluster keystore Service; current_wrap_key_id comes
+from values. The wrap key(s) themselves are the only piece the operator supplies as
+a secret (secrets.controlLayer.data: DWCTL_KEYSTORE__WRAP_KEYS__<ID>).
+default_ttl_seconds defaults in dwctl (7200s); set keystore.defaultTtlSeconds to
+override it.
+*/}}
+{{- define "control-layer.keystoreEnv" -}}
+- name: DWCTL_KEYSTORE__REDIS_URL
+  value: "redis://{{ include "control-layer.fullname" . }}-keystore:6379"
+- name: DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID
+  value: {{ .Values.keystore.currentWrapKeyId | quote }}
+{{- with .Values.keystore.defaultTtlSeconds }}
+- name: DWCTL_KEYSTORE__DEFAULT_TTL_SECONDS
+  value: {{ . | quote }}
+{{- end }}
+{{- end }}

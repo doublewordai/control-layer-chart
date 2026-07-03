@@ -79,6 +79,9 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
+            {{- if .Values.keystore.enabled }}
+            {{- include "control-layer.keystoreEnv" . | nindent 12 }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
