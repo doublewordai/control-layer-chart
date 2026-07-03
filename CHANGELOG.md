@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/doublewordai/control-layer-chart/compare/v1.1.0...v1.1.1) (2026-07-03)
+
+
+### Bug Fixes
+
+* wire ZDR keystore env into the fusillade daemon ([#82](https://github.com/doublewordai/control-layer-chart/issues/82)) ([d08f80a](https://github.com/doublewordai/control-layer-chart/commit/d08f80a4c7cd3753256c75d5b4e020d77f237c80))
+
 ## [1.1.0](https://github.com/doublewordai/control-layer-chart/compare/v1.0.0...v1.1.0) (2026-07-03)
 
 
