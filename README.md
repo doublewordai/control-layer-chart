@@ -138,6 +138,26 @@ When `fusillade.enabled: true`:
 - The control layer pods will have `background_services.batch_daemon.enabled` set to `never`
 - The fusillade pods will have `background_services.batch_daemon.enabled` set to `always`
 
+### Keystore Persistence with a Managed StorageClass
+
+The internal keystore can create and use a dedicated StorageClass for its Redis
+PVC. On GKE, set `disk-encryption-kms-key` to provision the backing Persistent
+Disk with a customer-managed Cloud KMS key:
+
+```yaml
+keystore:
+  enabled: true
+  persistence:
+    managedStorageClass:
+      enabled: true
+      parameters:
+        type: pd-balanced
+        disk-encryption-kms-key: projects/PROJECT_ID/locations/REGION/keyRings/KEY_RING/cryptoKeys/KEY
+```
+
+Existing PVCs keep the StorageClass they were created with. Recreate or migrate
+the keystore volume to move an existing install onto the managed StorageClass.
+
 ## Example Configurations
 
 ### With External Database

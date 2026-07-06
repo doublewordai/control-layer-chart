@@ -99,8 +99,9 @@ spec:
           {{- range .Values.keystore.persistence.accessModes }}
           - {{ . | quote }}
           {{- end }}
-        {{- if .Values.keystore.persistence.storageClass }}
-        storageClassName: {{ .Values.keystore.persistence.storageClass | quote }}
+        {{- $storageClassName := include "control-layer.keystore.persistenceStorageClassName" . }}
+        {{- if $storageClassName }}
+        storageClassName: {{ $storageClassName | quote }}
         {{- end }}
         resources:
           requests:

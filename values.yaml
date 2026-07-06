@@ -394,6 +394,21 @@ keystore:
     enabled: true
     # Leave empty to use the cluster default storage class.
     storageClass: ""
+    # Optionally create a StorageClass for this keystore PVC and bind the PVC to
+    # it. On GKE, set parameters.disk-encryption-kms-key to a regional Cloud KMS
+    # key to provision the backing Persistent Disk with CMEK.
+    managedStorageClass:
+      enabled: false
+      # Leave empty to use "<release>-control-layer-keystore-cmek".
+      name: ""
+      provisioner: pd.csi.storage.gke.io
+      reclaimPolicy: Delete
+      volumeBindingMode: WaitForFirstConsumer
+      allowVolumeExpansion: true
+      annotations: {}
+      parameters: {}
+        # type: pd-balanced
+        # disk-encryption-kms-key: projects/PROJECT_ID/locations/REGION/keyRings/KEY_RING/cryptoKeys/KEY
     accessModes:
       - ReadWriteOnce
     size: 1Gi
