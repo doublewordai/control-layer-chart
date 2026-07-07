@@ -129,6 +129,25 @@ app.kubernetes.io/component: keystore
 {{- end }}
 
 {{/*
+Name for the chart-managed keystore StorageClass.
+*/}}
+{{- define "control-layer.keystore.storageClassName" -}}
+{{- default (printf "%s-keystore-cmek" (include "control-layer.fullname" .)) .Values.keystore.persistence.managedStorageClass.name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+StorageClass selected by the keystore PVC. A managed class takes precedence over
+the legacy storageClass string because the chart also creates that class.
+*/}}
+{{- define "control-layer.keystore.persistenceStorageClassName" -}}
+{{- if .Values.keystore.persistence.managedStorageClass.enabled -}}
+{{- include "control-layer.keystore.storageClassName" . -}}
+{{- else -}}
+{{- .Values.keystore.persistence.storageClass -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 ZDR keystore env wiring, shared by the control-layer and fusillade Deployments so
 the two cannot drift. The fusillade daemon is what encrypts flex bodies, so it
 needs the keystore env just as much as the API pods do. Callers guard on
