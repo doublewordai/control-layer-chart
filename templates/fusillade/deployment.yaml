@@ -1,108 +1,125 @@
-{{- if .Values.fusillade.enabled }}
+{{- define "control-layer.fusillade.deployment" -}}
+{{- $root := .root -}}
+{{- $fusillade := $root.Values.fusillade -}}
+{{- $config := .config | default dict -}}
+{{- $component := .component -}}
+{{- $suffix := .suffix -}}
+{{- $mode := .mode -}}
+{{- $image := get $config "image" | default dict -}}
+{{- $baseImage := $fusillade.image | default dict -}}
+{{- $database := mergeOverwrite (deepCopy ($fusillade.database | default dict)) (get $config "database" | default dict) -}}
+{{- $podAnnotations := mergeOverwrite (deepCopy ($fusillade.podAnnotations | default dict)) (get $config "podAnnotations" | default dict) -}}
+{{- $podLabels := mergeOverwrite (deepCopy ($fusillade.podLabels | default dict)) (get $config "podLabels" | default dict) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "control-layer.fullname" . }}-fusillade
+  name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
   labels:
-    {{- include "control-layer.fusillade.labels" . | nindent 4 }}
+    {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
 spec:
-  replicas: {{ .Values.fusillade.replicaCount }}
+  replicas: {{- if hasKey $config "replicaCount" }} {{ get $config "replicaCount" }}{{- else }} {{ $fusillade.replicaCount }}{{- end }}
   selector:
     matchLabels:
-      {{- include "control-layer.fusillade.selectorLabels" . | nindent 6 }}
+      {{- include "control-layer.fusillade.selectorLabelsFor" (dict "root" $root "component" $component) | nindent 6 }}
   template:
     metadata:
       annotations:
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- with .Values.fusillade.podAnnotations }}
+        checksum/secret: {{ include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum }}
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        {{- with $podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "control-layer.fusillade.labels" . | nindent 8 }}
-        {{- with .Values.fusillade.podLabels }}
+        {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 8 }}
+        {{- with $podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with $root.Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
-      {{- with (.Values.fusillade.podSecurityContext | default .Values.podSecurityContext) }}
+      serviceAccountName: {{ include "control-layer.serviceAccountName" $root }}
+      {{- with (get $config "podSecurityContext" | default $fusillade.podSecurityContext | default $root.Values.podSecurityContext) }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: fusillade
-          {{- with (.Values.fusillade.securityContext | default .Values.securityContext) }}
+          {{- with (get $config "securityContext" | default $fusillade.securityContext | default $root.Values.securityContext) }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.fusillade.image.repository | default .Values.image.repository }}:{{ .Values.fusillade.image.tag | default .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.fusillade.image.pullPolicy | default .Values.image.pullPolicy }}
+          image: "{{ get $image "repository" | default (get $baseImage "repository") | default $root.Values.image.repository }}:{{ get $image "tag" | default (get $baseImage "tag") | default $root.Values.image.tag | default $root.Chart.AppVersion }}"
+          imagePullPolicy: {{ get $image "pullPolicy" | default (get $baseImage "pullPolicy") | default $root.Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ $root.Values.service.port }}
               protocol: TCP
           envFrom:
             - secretRef:
-                name: {{ include "control-layer.fullname" . }}-secret
+                name: {{ include "control-layer.fullname" $root }}-secret
           env:
-            # Enable fusillade daemon on these pods
-            - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
-              value: "always"
             {{- /* Database pool overrides for fusillade */}}
-            {{- with .Values.fusillade.database }}
-            {{- range $key, $value := .pool }}
+            {{- range $key, $value := (get $database "pool" | default dict) }}
             - name: DWCTL_DATABASE__POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .replica_pool }}
+            {{- range $key, $value := (get $database "replica_pool" | default dict) }}
             - name: DWCTL_DATABASE__REPLICA_POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .fusillade_pool }}
+            {{- range $key, $value := (get $database "fusillade_pool" | default dict) }}
             - name: DWCTL_DATABASE__FUSILLADE__POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .fusillade_replica_pool }}
+            {{- range $key, $value := (get $database "fusillade_replica_pool" | default dict) }}
             - name: DWCTL_DATABASE__FUSILLADE__REPLICA_POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .outlet_pool }}
+            {{- range $key, $value := (get $database "outlet_pool" | default dict) }}
             - name: DWCTL_DATABASE__OUTLET__POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .outlet_replica_pool }}
+            {{- range $key, $value := (get $database "outlet_replica_pool" | default dict) }}
             - name: DWCTL_DATABASE__OUTLET__REPLICA_POOL__{{ $key | upper }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if $root.Values.keystore.enabled }}
+            {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
-            {{- if .Values.keystore.enabled }}
-            {{- include "control-layer.keystoreEnv" . | nindent 12 }}
-            {{- end }}
-            {{- range $key, $value := .Values.env }}
+            {{- range $key, $value := $root.Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := .Values.fusillade.env }}
+            {{- range $key, $value := $fusillade.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-          {{- with .Values.fusillade.livenessProbe }}
+            {{- range $key, $value := (get $config "env" | default dict) }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            # Enable fusillade daemon on these pods
+            - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
+              value: "always"
+            {{- if $mode }}
+            - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+              value: {{ $mode | quote }}
+            {{- end }}
+          {{- with (get $config "livenessProbe" | default $fusillade.livenessProbe) }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.fusillade.readinessProbe }}
+          {{- with (get $config "readinessProbe" | default $fusillade.readinessProbe) }}
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.fusillade.startupProbe }}
+          {{- with (get $config "startupProbe" | default $fusillade.startupProbe) }}
           startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with (.Values.fusillade.resources | default .Values.resources) }}
+          {{- with (get $config "resources" | default $fusillade.resources | default $root.Values.resources) }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -111,32 +128,63 @@ spec:
               mountPath: /app/config.yaml
               subPath: control-layer-config.yaml
               readOnly: true
-            {{- with .Values.fusillade.volumeMounts }}
+            {{- with $fusillade.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- with .Values.volumeMounts }}
+            {{- with (get $config "volumeMounts" | default list) }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with $root.Values.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
         - name: config
           configMap:
-            name: {{ include "control-layer.fullname" . }}-config
-        {{- with .Values.fusillade.volumes }}
+            name: {{ include "control-layer.fullname" $root }}-config
+        {{- with $fusillade.volumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- with .Values.volumes }}
+        {{- with (get $config "volumes" | default list) }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
-      {{- with (.Values.fusillade.nodeSelector | default .Values.nodeSelector) }}
+        {{- with $root.Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with (get $config "nodeSelector" | default $fusillade.nodeSelector | default $root.Values.nodeSelector) }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with (.Values.fusillade.affinity | default .Values.affinity) }}
+      {{- with (get $config "affinity" | default $fusillade.affinity | default $root.Values.affinity) }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with (.Values.fusillade.tolerations | default .Values.tolerations) }}
+      {{- with (get $config "tolerations" | default $fusillade.tolerations | default $root.Values.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end -}}
+
+{{- if .Values.fusillade.enabled }}
+{{- $split := .Values.fusillade.split | default dict -}}
+{{- if $split.enabled }}
+{{- $request := $split.request | default dict -}}
+{{- $batch := $split.batch | default dict -}}
+{{- $requestEnabled := true -}}
+{{- $batchEnabled := true -}}
+{{- if hasKey $request "enabled" }}{{- $requestEnabled = $request.enabled -}}{{- end -}}
+{{- if hasKey $batch "enabled" }}{{- $batchEnabled = $batch.enabled -}}{{- end -}}
+{{- $rendered := false -}}
+{{- if $requestEnabled }}
+{{- include "control-layer.fusillade.deployment" (dict "root" . "suffix" "-fusillade-request" "component" "fusillade-request" "mode" "request_only" "config" $request) }}
+{{- $rendered = true -}}
+{{- end }}
+{{- if $batchEnabled }}
+{{- if $rendered }}
+---
+{{- end }}
+{{- include "control-layer.fusillade.deployment" (dict "root" . "suffix" "-fusillade-batch" "component" "fusillade-batch" "mode" "batch_only" "config" $batch) }}
+{{- end }}
+{{- else }}
+{{- include "control-layer.fusillade.deployment" (dict "root" . "suffix" "-fusillade" "component" "fusillade" "mode" (.Values.fusillade.mode | default "") "config" dict) }}
+{{- end }}
 {{- end }}

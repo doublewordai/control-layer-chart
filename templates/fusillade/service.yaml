@@ -1,17 +1,45 @@
-{{- if .Values.fusillade.enabled }}
+{{- define "control-layer.fusillade.service" -}}
+{{- $root := .root -}}
+{{- $suffix := .suffix -}}
+{{- $component := .component -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "control-layer.fullname" . }}-fusillade
+  name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
   labels:
-    {{- include "control-layer.fusillade.labels" . | nindent 4 }}
+    {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ $root.Values.service.port }}
       targetPort: http
       protocol: TCP
       name: http
   selector:
-    {{- include "control-layer.fusillade.selectorLabels" . | nindent 4 }}
+    {{- include "control-layer.fusillade.selectorLabelsFor" (dict "root" $root "component" $component) | nindent 4 }}
+{{- end -}}
+
+{{- if .Values.fusillade.enabled }}
+{{- $split := .Values.fusillade.split | default dict -}}
+{{- if $split.enabled }}
+{{- $request := $split.request | default dict -}}
+{{- $batch := $split.batch | default dict -}}
+{{- $requestEnabled := true -}}
+{{- $batchEnabled := true -}}
+{{- if hasKey $request "enabled" }}{{- $requestEnabled = $request.enabled -}}{{- end -}}
+{{- if hasKey $batch "enabled" }}{{- $batchEnabled = $batch.enabled -}}{{- end -}}
+{{- $rendered := false -}}
+{{- if $requestEnabled }}
+{{- include "control-layer.fusillade.service" (dict "root" . "suffix" "-fusillade-request" "component" "fusillade-request") }}
+{{- $rendered = true -}}
+{{- end }}
+{{- if $batchEnabled }}
+{{- if $rendered }}
+---
+{{- end }}
+{{- include "control-layer.fusillade.service" (dict "root" . "suffix" "-fusillade-batch" "component" "fusillade-batch") }}
+{{- end }}
+{{- else }}
+{{- include "control-layer.fusillade.service" (dict "root" . "suffix" "-fusillade" "component" "fusillade") }}
+{{- end }}
 {{- end }}

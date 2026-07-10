@@ -1,26 +1,54 @@
-{{- if and .Values.fusillade.enabled .Values.serviceMonitor.enabled }}
+{{- define "control-layer.fusillade.serviceMonitor" -}}
+{{- $root := .root -}}
+{{- $suffix := .suffix -}}
+{{- $component := .component -}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "control-layer.fullname" . }}-fusillade
+  name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
   labels:
-    {{- include "control-layer.fusillade.labels" . | nindent 4 }}
-    {{- with .Values.serviceMonitor.labels }}
+    {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
+    {{- with $root.Values.serviceMonitor.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
   selector:
     matchLabels:
-      {{- include "control-layer.fusillade.selectorLabels" . | nindent 6 }}
+      {{- include "control-layer.fusillade.selectorLabelsFor" (dict "root" $root "component" $component) | nindent 6 }}
   endpoints:
     - port: http
-      {{- with .Values.serviceMonitor.path }}
+      {{- with $root.Values.serviceMonitor.path }}
       path: {{ . }}
       {{- end }}
-      {{- with .Values.serviceMonitor.interval }}
+      {{- with $root.Values.serviceMonitor.interval }}
       interval: {{ . }}
       {{- end }}
-      {{- with .Values.serviceMonitor.scrapeTimeout }}
+      {{- with $root.Values.serviceMonitor.scrapeTimeout }}
       scrapeTimeout: {{ . }}
       {{- end }}
+{{- end -}}
+
+{{- if and .Values.fusillade.enabled .Values.serviceMonitor.enabled }}
+{{- $split := .Values.fusillade.split | default dict -}}
+{{- if $split.enabled }}
+{{- $request := $split.request | default dict -}}
+{{- $batch := $split.batch | default dict -}}
+{{- $requestEnabled := true -}}
+{{- $batchEnabled := true -}}
+{{- if hasKey $request "enabled" }}{{- $requestEnabled = $request.enabled -}}{{- end -}}
+{{- if hasKey $batch "enabled" }}{{- $batchEnabled = $batch.enabled -}}{{- end -}}
+{{- $rendered := false -}}
+{{- if $requestEnabled }}
+{{- include "control-layer.fusillade.serviceMonitor" (dict "root" . "suffix" "-fusillade-request" "component" "fusillade-request") }}
+{{- $rendered = true -}}
+{{- end }}
+{{- if $batchEnabled }}
+{{- if $rendered }}
+---
+{{- end }}
+{{- include "control-layer.fusillade.serviceMonitor" (dict "root" . "suffix" "-fusillade-batch" "component" "fusillade-batch") }}
+{{- end }}
+{{- else }}
+{{- include "control-layer.fusillade.serviceMonitor" (dict "root" . "suffix" "-fusillade" "component" "fusillade") }}
+{{- end }}
 {{- end }}

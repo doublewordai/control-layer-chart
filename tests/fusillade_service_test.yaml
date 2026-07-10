@@ -1,0 +1,66 @@
+suite: test fusillade services
+templates:
+  - fusillade/service.yaml
+tests:
+  - it: should not create fusillade service when disabled
+    template: fusillade/service.yaml
+    set:
+      fusillade.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create the standard fusillade service when split mode is disabled
+    template: fusillade/service.yaml
+    set:
+      fusillade.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: fusillade
+
+  - it: should create request and batch services when split mode is enabled
+    template: fusillade/service.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+        documentIndex: 0
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: fusillade-request
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-batch
+        documentIndex: 1
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: fusillade-batch
+        documentIndex: 1
+
+  - it: should only create enabled split daemon services
+    template: fusillade/service.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      fusillade.split.request.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-batch
+      - equal:
+          path: spec.selector["app.kubernetes.io/component"]
+          value: fusillade-batch
