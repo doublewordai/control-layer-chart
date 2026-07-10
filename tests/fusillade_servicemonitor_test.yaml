@@ -1,0 +1,70 @@
+suite: test fusillade service monitors
+templates:
+  - fusillade/servicemonitor.yaml
+tests:
+  - it: should not create fusillade ServiceMonitor when monitoring is disabled
+    template: fusillade/servicemonitor.yaml
+    set:
+      fusillade.enabled: true
+      serviceMonitor.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create the standard fusillade ServiceMonitor when split mode is disabled
+    template: fusillade/servicemonitor.yaml
+    set:
+      fusillade.enabled: true
+      serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade
+
+  - it: should create request and batch ServiceMonitors when split mode is enabled
+    template: fusillade/servicemonitor.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+        documentIndex: 0
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade-request
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-batch
+        documentIndex: 1
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade-batch
+        documentIndex: 1
+
+  - it: should only create enabled split daemon ServiceMonitors
+    template: fusillade/servicemonitor.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      fusillade.split.batch.enabled: false
+      serviceMonitor.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade-request

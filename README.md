@@ -124,6 +124,18 @@ The fusillade daemon handles background batch processing tasks. By default, it r
 |-----------|-------------|---------|
 | `fusillade.enabled` | Deploy fusillade as a separate deployment | `false` |
 | `fusillade.replicaCount` | Number of fusillade replicas | `1` |
+| `fusillade.mode` | Optional daemon mode for the standard fusillade deployment (`both`, `request_only`, `batch_only`); empty uses the application default | `""` |
+| `fusillade.split.enabled` | Render separate request-only and batch-only daemon deployments | `false` |
+| `fusillade.split.request.enabled` | Render the request-only daemon deployment | `true` |
+| `fusillade.split.request.replicaCount` | Number of request daemon replicas | inherits `fusillade.replicaCount` |
+| `fusillade.split.request.resources` | CPU/Memory requests/limits for request daemon pods | inherits `fusillade.resources` |
+| `fusillade.split.request.env` | Additional environment variables for request daemon pods | merged after `env` and `fusillade.env` |
+| `fusillade.split.request.database` | Database pool overrides for request daemon pods | merged over `fusillade.database` |
+| `fusillade.split.batch.enabled` | Render the batch-only daemon deployment | `true` |
+| `fusillade.split.batch.replicaCount` | Number of batch daemon replicas | inherits `fusillade.replicaCount` |
+| `fusillade.split.batch.resources` | CPU/Memory requests/limits for batch daemon pods | inherits `fusillade.resources` |
+| `fusillade.split.batch.env` | Additional environment variables for batch daemon pods | merged after `env` and `fusillade.env` |
+| `fusillade.split.batch.database` | Database pool overrides for batch daemon pods | merged over `fusillade.database` |
 | `fusillade.image.repository` | Override image repository | (uses main image) |
 | `fusillade.image.tag` | Override image tag | (uses main image) |
 | `fusillade.resources` | CPU/Memory resource requests/limits | `{}` |
@@ -137,6 +149,8 @@ The fusillade daemon handles background batch processing tasks. By default, it r
 When `fusillade.enabled: true`:
 - The control layer pods will have `background_services.batch_daemon.enabled` set to `never`
 - The fusillade pods will have `background_services.batch_daemon.enabled` set to `always`
+- The standard fusillade deployment uses the application's default daemon mode unless `fusillade.mode` is set
+- With `fusillade.split.enabled: true`, request pods use `mode=request_only` and batch pods use `mode=batch_only`
 
 ### Keystore Persistence with a Managed StorageClass
 
@@ -214,6 +228,31 @@ fusillade:
     requests:
       cpu: 500m
       memory: 512Mi
+```
+
+### With Split Fusillade Daemons
+
+```yaml
+# split-fusillade-values.yaml
+fusillade:
+  enabled: true
+  split:
+    enabled: true
+    request:
+      replicaCount: 4
+      resources:
+        requests:
+          cpu: 500m
+          memory: 512Mi
+    batch:
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: 1000m
+          memory: 1Gi
+      database:
+        fusillade_pool:
+          max_connections: 80
 ```
 
 ## License

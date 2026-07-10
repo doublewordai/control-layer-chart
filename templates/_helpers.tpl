@@ -87,23 +87,30 @@ Create the name of the service account to use
 {{/*
 Common labels for fusillade
 */}}
-{{- define "control-layer.fusillade.labels" -}}
-helm.sh/chart: {{ include "control-layer.chart" . }}
-{{ include "control-layer.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- define "control-layer.fusillade.labelsFor" -}}
+helm.sh/chart: {{ include "control-layer.chart" .root }}
+{{ include "control-layer.fusillade.selectorLabelsFor" . }}
+{{- if .root.Chart.AppVersion }}
+app.kubernetes.io/version: {{ .root.Chart.AppVersion | quote }}
 {{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/component: fusillade
+app.kubernetes.io/managed-by: {{ .root.Release.Service }}
+{{- end }}
+
+{{- define "control-layer.fusillade.labels" -}}
+{{ include "control-layer.fusillade.labelsFor" (dict "root" . "component" "fusillade") }}
 {{- end }}
 
 {{/*
 Selector labels for fusillade
 */}}
+{{- define "control-layer.fusillade.selectorLabelsFor" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" .root }}
+app.kubernetes.io/instance: {{ .root.Release.Name }}
+app.kubernetes.io/component: {{ .component }}
+{{- end }}
+
 {{- define "control-layer.fusillade.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "control-layer.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-app.kubernetes.io/component: fusillade
+{{ include "control-layer.fusillade.selectorLabelsFor" (dict "root" . "component" "fusillade") }}
 {{- end }}
 
 {{/*

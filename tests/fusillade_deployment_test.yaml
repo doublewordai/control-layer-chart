@@ -40,6 +40,29 @@ tests:
             name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
             value: "always"
 
+  - it: should use the application default daemon mode for the standard fusillade deployment
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+          any: true
+
+  - it: should allow overriding daemon mode for the standard fusillade deployment
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.mode: batch_only
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+            value: "batch_only"
+
   - it: should set database pool env vars when fusillade.database.pool is configured
     template: fusillade/deployment.yaml
     set:
@@ -176,3 +199,152 @@ tests:
           content:
             name: DWCTL_DATABASE__POOL__MAX_CONNECTIONS
           any: true
+
+  - it: should render separate request and batch daemon deployments when split mode is enabled
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+        documentIndex: 0
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade-request
+        documentIndex: 0
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade-request
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+            value: "request_only"
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-batch
+        documentIndex: 1
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade-batch
+        documentIndex: 1
+      - equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: fusillade-batch
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+            value: "batch_only"
+        documentIndex: 1
+
+  - it: should independently configure and scale split daemon deployments
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.replicaCount: 2
+      fusillade.resources.requests.cpu: 100m
+      fusillade.database.fusillade_pool.min_connections: 2
+      fusillade.split.enabled: true
+      fusillade.split.request.replicaCount: 4
+      fusillade.split.request.resources.requests.cpu: 250m
+      fusillade.split.request.env.REQUEST_DAEMON_ONLY: "true"
+      fusillade.split.request.database.fusillade_pool.max_connections: 25
+      fusillade.split.batch.replicaCount: 1
+      fusillade.split.batch.resources.requests.cpu: 900m
+      fusillade.split.batch.env.BATCH_DAEMON_ONLY: "true"
+      fusillade.split.batch.database.fusillade_pool.max_connections: 80
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 4
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 250m
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: REQUEST_DAEMON_ONLY
+            value: "true"
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MIN_CONNECTIONS
+            value: "2"
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MAX_CONNECTIONS
+            value: "25"
+        documentIndex: 0
+      - equal:
+          path: spec.replicas
+          value: 1
+        documentIndex: 1
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 900m
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: BATCH_DAEMON_ONLY
+            value: "true"
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MIN_CONNECTIONS
+            value: "2"
+        documentIndex: 1
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__FUSILLADE__POOL__MAX_CONNECTIONS
+            value: "80"
+        documentIndex: 1
+
+  - it: should inherit common fusillade replica count in split mode
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.replicaCount: 3
+      fusillade.split.enabled: true
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 3
+        documentIndex: 0
+      - equal:
+          path: spec.replicas
+          value: 3
+        documentIndex: 1
+
+  - it: should allow disabling one split daemon deployment
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      fusillade.split.batch.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
+            value: "request_only"

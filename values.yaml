@@ -195,6 +195,60 @@ fusillade:
   # Number of fusillade daemon replicas
   replicaCount: 1
 
+  # Optional daemon mode for the standard single fusillade deployment.
+  # Leave empty to use the application's default mode (both).
+  # Split mode overrides this per deployment.
+  # Options: both, request_only, batch_only
+  mode: ""
+
+  # Split the fusillade daemon into independently configurable request and batch deployments.
+  # When enabled, the chart renders:
+  #   - <release>-control-layer-fusillade-request with mode=request_only
+  #   - <release>-control-layer-fusillade-batch with mode=batch_only
+  # Each split daemon inherits the top-level fusillade settings. Scalar and map
+  # settings such as replicaCount, image, resources, pod metadata, security
+  # context, scheduling, probes, and database pools can be overridden per daemon.
+  # env is merged after global/fusillade env, while volumes and volumeMounts are
+  # appended to the top-level lists.
+  split:
+    enabled: false
+    request:
+      enabled: true
+      image: {}
+      resources: {}
+      podAnnotations: {}
+      podLabels: {}
+      podSecurityContext: {}
+      securityContext: {}
+      nodeSelector: {}
+      tolerations: []
+      affinity: {}
+      livenessProbe: {}
+      readinessProbe: {}
+      startupProbe: {}
+      database: {}
+      env: {}
+      volumes: []
+      volumeMounts: []
+    batch:
+      enabled: true
+      image: {}
+      resources: {}
+      podAnnotations: {}
+      podLabels: {}
+      podSecurityContext: {}
+      securityContext: {}
+      nodeSelector: {}
+      tolerations: []
+      affinity: {}
+      livenessProbe: {}
+      readinessProbe: {}
+      startupProbe: {}
+      database: {}
+      env: {}
+      volumes: []
+      volumeMounts: []
+
   # Override image settings for fusillade (defaults to main image settings)
   image: {}
     # repository: ghcr.io/doublewordai/control-layer
