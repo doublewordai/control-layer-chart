@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/doublewordai/control-layer-chart/compare/v1.2.0...v1.3.0) (2026-07-10)
+
+
+### Features
+
+* support split fusillade daemon deployments ([#86](https://github.com/doublewordai/control-layer-chart/issues/86)) ([b972f3d](https://github.com/doublewordai/control-layer-chart/commit/b972f3d76bf7dba9c3591efaf264c59d286492d8))
+
 ## [1.2.0](https://github.com/doublewordai/control-layer-chart/compare/v1.1.1...v1.2.0) (2026-07-07)
 
 
