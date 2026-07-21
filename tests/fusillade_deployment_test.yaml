@@ -41,6 +41,17 @@ tests:
             secretRef:
               name: externally-managed-runtime
 
+  - it: should load control layer overlay secrets in order
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      secrets.controlLayer.extraExistingSecrets:
+        - rotated-database
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].secretRef.name
+          value: rotated-database
+
   - it: should always enable batch daemon via env var
     template: fusillade/deployment.yaml
     set:

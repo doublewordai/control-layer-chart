@@ -50,6 +50,19 @@ The named Secret must exist in the release namespace and contain
 chart does not render or mutate a Secret when `existingSecret` is set, and both
 the application and Fusillade workloads consume the same name.
 
+For a small credential that rotates independently, keep the chart-owned Secret
+and load one or more overlays after it:
+
+```yaml
+secrets:
+  controlLayer:
+    extraExistingSecrets:
+      - rotated-database
+```
+
+Kubernetes resolves duplicate `envFrom` keys from the later Secret, so overlays
+should contain only the keys they intentionally replace.
+
 The following table lists the configurable parameters and their default values. See `values.yaml` for all available options.
 
 ### Core Configuration

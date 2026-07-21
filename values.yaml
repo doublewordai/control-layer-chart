@@ -28,6 +28,10 @@ secrets:
     # rendered and all control-layer/Fusillade pods load this Secret instead.
     # The Secret must contain DATABASE_URL and any other required runtime keys.
     existingSecret: ""
+    # Additional Secrets loaded after the primary Secret. Kubernetes resolves
+    # duplicate envFrom keys from the later source, which is useful for small
+    # credentials that rotate independently from the chart-owned Secret.
+    extraExistingSecrets: []
     data:
       # DATABASE_URL will be templated in secret.yaml for internal PostgreSQL (if empty)
       # For external PostgreSQL, override with your external connection string

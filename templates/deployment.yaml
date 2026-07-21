@@ -48,6 +48,10 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ include "control-layer.secretName" . }}
+            {{- range .Values.secrets.controlLayer.extraExistingSecrets }}
+            - secretRef:
+                name: {{ . | quote }}
+            {{- end }}
           env:
             {{- if .Values.bootstrap.enabled }}
             - name: DASHBOARD_BOOTSTRAP_JS
