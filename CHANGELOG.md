@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/doublewordai/control-layer-chart/compare/v1.3.0...v1.4.0) (2026-07-21)
+
+
+### Features
+
+* support externally managed runtime secrets ([#88](https://github.com/doublewordai/control-layer-chart/issues/88)) ([db9bb9f](https://github.com/doublewordai/control-layer-chart/commit/db9bb9f6e94808c75e62862772e1f091550d5ab6))
+
 ## [1.3.0](https://github.com/doublewordai/control-layer-chart/compare/v1.2.0...v1.3.0) (2026-07-10)
 
 
