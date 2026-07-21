@@ -47,7 +47,7 @@ spec:
               protocol: TCP
           envFrom:
             - secretRef:
-                name: {{ include "control-layer.fullname" . }}-secret
+                name: {{ include "control-layer.secretName" . }}
           env:
             {{- if .Values.bootstrap.enabled }}
             - name: DASHBOARD_BOOTSTRAP_JS

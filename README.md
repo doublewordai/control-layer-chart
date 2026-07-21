@@ -33,6 +33,23 @@ helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer -f
 
 ## Configuration
 
+### Externally managed runtime Secret
+
+By default the chart creates `<release>-control-layer-secret` from
+`secrets.controlLayer.data`. To use a Secret managed by another controller,
+configure its name instead:
+
+```yaml
+secrets:
+  controlLayer:
+    existingSecret: externally-managed-runtime
+```
+
+The named Secret must exist in the release namespace and contain
+`DATABASE_URL` plus any other runtime keys required by the deployment. The
+chart does not render or mutate a Secret when `existingSecret` is set, and both
+the application and Fusillade workloads consume the same name.
+
 The following table lists the configurable parameters and their default values. See `values.yaml` for all available options.
 
 ### Core Configuration
