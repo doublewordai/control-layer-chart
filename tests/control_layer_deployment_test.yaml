@@ -55,6 +55,34 @@ tests:
             secretRef:
               name: RELEASE-NAME-control-layer-secret
 
+  - it: should consume an existing runtime secret
+    template: deployment.yaml
+    set:
+      secrets.controlLayer.existingSecret: externally-managed-runtime
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: externally-managed-runtime
+
+  - it: should load overlay secrets after the primary secret
+    template: deployment.yaml
+    set:
+      secrets.controlLayer.extraExistingSecrets:
+        - rotated-database
+        - ephemeral-token
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[0].secretRef.name
+          value: RELEASE-NAME-control-layer-secret
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].secretRef.name
+          value: rotated-database
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[2].secretRef.name
+          value: ephemeral-token
+
   - it: should use correct labels and selectors
     template: deployment.yaml
     asserts:
@@ -67,4 +95,3 @@ tests:
       - equal:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: control-layer
-

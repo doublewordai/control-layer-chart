@@ -85,6 +85,13 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Name of the Secret consumed by control-layer and Fusillade workloads.
+*/}}
+{{- define "control-layer.secretName" -}}
+{{- default (printf "%s-secret" (include "control-layer.fullname" .)) .Values.secrets.controlLayer.existingSecret -}}
+{{- end }}
+
+{{/*
 Common labels for fusillade
 */}}
 {{- define "control-layer.fusillade.labelsFor" -}}

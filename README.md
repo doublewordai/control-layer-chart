@@ -33,6 +33,36 @@ helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer -f
 
 ## Configuration
 
+### Externally managed runtime Secret
+
+By default the chart creates `<release>-control-layer-secret` from
+`secrets.controlLayer.data`. To use a Secret managed by another controller,
+configure its name instead:
+
+```yaml
+secrets:
+  controlLayer:
+    existingSecret: externally-managed-runtime
+```
+
+The named Secret must exist in the release namespace and contain
+`DATABASE_URL` plus any other runtime keys required by the deployment. The
+chart does not render or mutate a Secret when `existingSecret` is set, and both
+the application and Fusillade workloads consume the same name.
+
+For a small credential that rotates independently, keep the chart-owned Secret
+and load one or more overlays after it:
+
+```yaml
+secrets:
+  controlLayer:
+    extraExistingSecrets:
+      - rotated-database
+```
+
+Kubernetes resolves duplicate `envFrom` keys from the later Secret, so overlays
+should contain only the keys they intentionally replace.
+
 The following table lists the configurable parameters and their default values. See `values.yaml` for all available options.
 
 ### Core Configuration

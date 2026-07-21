@@ -29,6 +29,29 @@ tests:
           path: metadata.labels["app.kubernetes.io/component"]
           value: fusillade
 
+  - it: should consume the control layer existing runtime secret
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      secrets.controlLayer.existingSecret: externally-managed-runtime
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: externally-managed-runtime
+
+  - it: should load control layer overlay secrets in order
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      secrets.controlLayer.extraExistingSecrets:
+        - rotated-database
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].envFrom[1].secretRef.name
+          value: rotated-database
+
   - it: should always enable batch daemon via env var
     template: fusillade/deployment.yaml
     set:

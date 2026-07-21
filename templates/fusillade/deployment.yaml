@@ -58,7 +58,11 @@ spec:
               protocol: TCP
           envFrom:
             - secretRef:
-                name: {{ include "control-layer.fullname" $root }}-secret
+                name: {{ include "control-layer.secretName" $root }}
+            {{- range $root.Values.secrets.controlLayer.extraExistingSecrets }}
+            - secretRef:
+                name: {{ . | quote }}
+            {{- end }}
           env:
             {{- /* Database pool overrides for fusillade */}}
             {{- range $key, $value := (get $database "pool" | default dict) }}
