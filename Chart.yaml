@@ -3,7 +3,7 @@ name: control-layer
 description: A Helm subchart for deploying the Doubleword control layer component
 type: application
 version: 1.4.0
-appVersion: 8.78.0
+appVersion: 9.3.0
 annotations:
   org.opencontainers.image.source: https://github.com/doublewordai/control-layer-chart
   org.opencontainers.image.description: Helm chart for deploying the Doubleword control layer service
