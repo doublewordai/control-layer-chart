@@ -160,6 +160,7 @@ rollout:
       maxUnavailable: 0
       maxSurge: 1
   endpointDrainDelaySeconds: 15
+  connectionDrainTimeoutSeconds: 3600
   terminationGracePeriodSeconds: 3700
   minReadySeconds: 15
   progressDeadlineSeconds: 4200
@@ -169,7 +170,8 @@ Kubernetes first marks the old Pod endpoint as terminating. The `preStop`
 delay keeps the process alive while Service and ingress routing converge, after
 which the control layer receives `SIGTERM` and uses its application-level
 graceful shutdown path. The termination grace supports requests lasting up to
-one hour, with additional time for endpoint propagation and cleanup.
+`connectionDrainTimeoutSeconds`, with additional time for endpoint propagation
+and cleanup.
 
 `maxUnavailable: 0` and `maxSurge: 1` temporarily require capacity for one
 extra control-layer Pod. These settings apply only to the request-serving

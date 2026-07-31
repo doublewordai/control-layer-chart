@@ -118,6 +118,7 @@ tests:
       rollout.strategy.rollingUpdate.maxUnavailable: 0
       rollout.strategy.rollingUpdate.maxSurge: 1
       rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 3600
       rollout.terminationGracePeriodSeconds: 3700
       rollout.minReadySeconds: 15
       rollout.progressDeadlineSeconds: 4200
@@ -150,6 +151,7 @@ tests:
     set:
       rollout.enabled: true
       rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 3600
       rollout.terminationGracePeriodSeconds: 15
       rollout.progressDeadlineSeconds: 4200
     asserts:
@@ -161,8 +163,48 @@ tests:
     set:
       rollout.enabled: true
       rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 3600
       rollout.terminationGracePeriodSeconds: 3700
       rollout.progressDeadlineSeconds: 3700
     asserts:
       - failedTemplate:
           errorMessage: rollout.progressDeadlineSeconds must be greater than rollout.terminationGracePeriodSeconds
+
+  - it: should reject a grace period shorter than the complete request drain
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 3600
+      rollout.terminationGracePeriodSeconds: 3615
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout.terminationGracePeriodSeconds must exceed rollout.endpointDrainDelaySeconds plus rollout.connectionDrainTimeoutSeconds
+
+  - it: should reject a rolling strategy that can remove serving capacity
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.strategy.type: RollingUpdate
+      rollout.strategy.rollingUpdate.maxUnavailable: 1
+      rollout.strategy.rollingUpdate.maxSurge: 1
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 3600
+      rollout.terminationGracePeriodSeconds: 3700
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout.strategy must use RollingUpdate with maxUnavailable 0 and maxSurge 1
+
+  - it: should reject negative rollout timings
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.endpointDrainDelaySeconds: -1
+      rollout.connectionDrainTimeoutSeconds: 3600
+      rollout.terminationGracePeriodSeconds: 3700
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout timing values must be non-negative and connectionDrainTimeoutSeconds must be positive

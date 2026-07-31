@@ -70,6 +70,7 @@ rollout:
       maxUnavailable: 0
       maxSurge: 1
   endpointDrainDelaySeconds: 15
+  connectionDrainTimeoutSeconds: 3600
   terminationGracePeriodSeconds: 3700
   minReadySeconds: 15
   progressDeadlineSeconds: 4200

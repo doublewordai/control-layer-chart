@@ -1,9 +1,21 @@
 {{- if .Values.rollout.enabled }}
+{{- if or (lt (int .Values.rollout.endpointDrainDelaySeconds) 0) (le (int .Values.rollout.connectionDrainTimeoutSeconds) 0) (lt (int .Values.rollout.minReadySeconds) 0) }}
+{{- fail "rollout timing values must be non-negative and connectionDrainTimeoutSeconds must be positive" }}
+{{- end }}
+{{- if or (ne .Values.rollout.strategy.type "RollingUpdate") (ne (toString .Values.rollout.strategy.rollingUpdate.maxUnavailable) "0") (ne (toString .Values.rollout.strategy.rollingUpdate.maxSurge) "1") }}
+{{- fail "rollout.strategy must use RollingUpdate with maxUnavailable 0 and maxSurge 1" }}
+{{- end }}
 {{- if le (int .Values.rollout.terminationGracePeriodSeconds) (int .Values.rollout.endpointDrainDelaySeconds) }}
 {{- fail "rollout.terminationGracePeriodSeconds must be greater than rollout.endpointDrainDelaySeconds" }}
 {{- end }}
+{{- if le (int .Values.rollout.terminationGracePeriodSeconds) (add (int .Values.rollout.endpointDrainDelaySeconds) (int .Values.rollout.connectionDrainTimeoutSeconds)) }}
+{{- fail "rollout.terminationGracePeriodSeconds must exceed rollout.endpointDrainDelaySeconds plus rollout.connectionDrainTimeoutSeconds" }}
+{{- end }}
 {{- if le (int .Values.rollout.progressDeadlineSeconds) (int .Values.rollout.terminationGracePeriodSeconds) }}
 {{- fail "rollout.progressDeadlineSeconds must be greater than rollout.terminationGracePeriodSeconds" }}
+{{- end }}
+{{- if le (int .Values.rollout.progressDeadlineSeconds) (int .Values.rollout.minReadySeconds) }}
+{{- fail "rollout.progressDeadlineSeconds must be greater than rollout.minReadySeconds" }}
 {{- end }}
 {{- end }}
 apiVersion: apps/v1
