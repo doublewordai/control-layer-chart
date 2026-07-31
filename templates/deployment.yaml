@@ -1,3 +1,26 @@
+{{- if .Values.rollout.enabled }}
+{{- if or (lt (int .Values.rollout.endpointDrainDelaySeconds) 0) (le (int .Values.rollout.connectionDrainTimeoutSeconds) 0) (lt (int .Values.rollout.minReadySeconds) 0) }}
+{{- fail "rollout timing values must be non-negative and connectionDrainTimeoutSeconds must be positive" }}
+{{- end }}
+{{- if ne (int .Values.rollout.connectionDrainTimeoutSeconds) 3600 }}
+{{- fail "rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout" }}
+{{- end }}
+{{- if or (ne .Values.rollout.strategy.type "RollingUpdate") (ne (toString .Values.rollout.strategy.rollingUpdate.maxUnavailable) "0") (ne (toString .Values.rollout.strategy.rollingUpdate.maxSurge) "1") }}
+{{- fail "rollout.strategy must use RollingUpdate with maxUnavailable 0 and maxSurge 1" }}
+{{- end }}
+{{- if le (int .Values.rollout.terminationGracePeriodSeconds) (int .Values.rollout.endpointDrainDelaySeconds) }}
+{{- fail "rollout.terminationGracePeriodSeconds must be greater than rollout.endpointDrainDelaySeconds" }}
+{{- end }}
+{{- if le (int .Values.rollout.terminationGracePeriodSeconds) (add (int .Values.rollout.endpointDrainDelaySeconds) (int .Values.rollout.connectionDrainTimeoutSeconds)) }}
+{{- fail "rollout.terminationGracePeriodSeconds must exceed rollout.endpointDrainDelaySeconds plus rollout.connectionDrainTimeoutSeconds" }}
+{{- end }}
+{{- if le (int .Values.rollout.progressDeadlineSeconds) (int .Values.rollout.terminationGracePeriodSeconds) }}
+{{- fail "rollout.progressDeadlineSeconds must be greater than rollout.terminationGracePeriodSeconds" }}
+{{- end }}
+{{- if le (int .Values.rollout.progressDeadlineSeconds) (int .Values.rollout.minReadySeconds) }}
+{{- fail "rollout.progressDeadlineSeconds must be greater than rollout.minReadySeconds" }}
+{{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,6 +29,12 @@ metadata:
     {{- include "control-layer.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if .Values.rollout.enabled }}
+  strategy:
+    {{- toYaml .Values.rollout.strategy | nindent 4 }}
+  minReadySeconds: {{ .Values.rollout.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "control-layer.selectorLabels" . | nindent 6 }}
@@ -24,6 +53,9 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      {{- if .Values.rollout.enabled }}
+      terminationGracePeriodSeconds: {{ .Values.rollout.terminationGracePeriodSeconds }}
+      {{- end }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -35,6 +67,15 @@ spec:
       {{- end }}
       containers:
         - name: control-layer
+          {{- if .Values.rollout.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep {{ .Values.rollout.endpointDrainDelaySeconds }}
+          {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

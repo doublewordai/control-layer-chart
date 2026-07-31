@@ -60,6 +60,22 @@ secrets:
 # This will set the replicaset count
 replicaCount: 1
 
+# Opt-in rollout controls for request-serving control-layer pods. Enabling this
+# keeps replacement capacity available while existing requests drain.
+rollout:
+  enabled: false
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  endpointDrainDelaySeconds: 15
+  # This mirrors the control-layer application's fixed maximum request wait.
+  connectionDrainTimeoutSeconds: 3600
+  terminationGracePeriodSeconds: 3700
+  minReadySeconds: 15
+  progressDeadlineSeconds: 4200
+
 # This sets the container image
 image:
   repository: ghcr.io/doublewordai/control-layer

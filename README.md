@@ -146,6 +146,44 @@ The chart supports both internal and external PostgreSQL databases:
 | `volumes` | Additional volumes | `[]` |
 | `volumeMounts` | Additional volume mounts | `[]` |
 
+### Graceful rollouts
+
+Long-running request handlers can be preserved during a Deployment rollout by
+enabling the opt-in rollout contract:
+
+```yaml
+rollout:
+  enabled: true
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  endpointDrainDelaySeconds: 15
+  connectionDrainTimeoutSeconds: 3600
+  terminationGracePeriodSeconds: 3700
+  minReadySeconds: 15
+  progressDeadlineSeconds: 4200
+```
+
+Kubernetes first marks the old Pod endpoint as terminating. The `preStop`
+delay keeps the process alive while Service and ingress routing converge, after
+which the control layer receives `SIGTERM` and uses its application-level
+graceful shutdown path. The termination grace supports requests lasting up to
+`connectionDrainTimeoutSeconds`, with additional time for endpoint propagation
+and cleanup. Keep `connectionDrainTimeoutSeconds` at `3600`: it mirrors the
+application's fixed maximum request wait and is validated rather than passed to
+the process as runtime configuration.
+
+`maxUnavailable: 0` and `maxSurge: 1` temporarily require capacity for one
+extra control-layer Pod. These settings apply only to the request-serving
+Deployment; Fusillade workers retain their independent shutdown and recovery
+behavior.
+
+The progress deadline must be greater than the termination grace, and the
+termination grace must be greater than the endpoint drain delay. The chart
+rejects enabled configurations that violate either requirement.
+
 ### Fusillade Daemon Configuration
 
 The fusillade daemon handles background batch processing tasks. By default, it runs within the control layer pods based on leader election. You can optionally deploy it as a separate deployment for better resource isolation and independent scaling.
