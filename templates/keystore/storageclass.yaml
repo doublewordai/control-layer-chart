@@ -1,4 +1,4 @@
-{{- if and .Values.keystore.enabled .Values.keystore.persistence.enabled .Values.keystore.persistence.managedStorageClass.enabled }}
+{{- if and .Values.keystore.enabled (not .Values.keystore.external.enabled) .Values.keystore.persistence.enabled .Values.keystore.persistence.managedStorageClass.enabled }}
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
