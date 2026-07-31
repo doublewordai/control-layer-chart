@@ -182,11 +182,12 @@ When `fusillade.enabled: true`:
 - The standard fusillade deployment uses the application's default daemon mode unless `fusillade.mode` is set
 - With `fusillade.split.enabled: true`, request pods use `mode=request_only` and batch pods use `mode=batch_only`
 
-### Keystore Persistence with a Managed StorageClass
+### Keystore Redis
 
-The internal keystore can create and use a dedicated StorageClass for its Redis
-PVC. On GKE, set `disk-encryption-kms-key` to provision the backing Persistent
-Disk with a customer-managed Cloud KMS key:
+Enabling the ZDR keystore deploys a single-instance Redis StatefulSet and
+Service by default. The internal keystore can create and use a dedicated
+StorageClass for its Redis PVC. On GKE, set `disk-encryption-kms-key` to
+provision the backing Persistent Disk with a customer-managed Cloud KMS key:
 
 ```yaml
 keystore:
@@ -201,6 +202,40 @@ keystore:
 
 Existing PVCs keep the StorageClass they were created with. Recreate or migrate
 the keystore volume to move an existing install onto the managed StorageClass.
+
+To use a separately managed Redis service, first create a Secret in the release
+namespace containing the complete connection URL. The resulting Secret must
+have this shape; supply its value through your secret-management workflow and
+do not commit the populated manifest:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-keystore
+type: Opaque
+data:
+  redis-url: <base64-encoded-redis-connection-url>
+```
+
+Then enable external mode and reference the Secret:
+
+```yaml
+keystore:
+  enabled: true
+  external:
+    enabled: true
+    existingSecret: external-keystore
+    existingSecretKey: redis-url
+```
+
+External mode does not render the internal Redis StatefulSet, Service, or
+managed StorageClass. Both the control layer and Fusillade workloads read
+`DWCTL_KEYSTORE__REDIS_URL` directly from the Secret; the connection URL is not
+placed in ordinary Helm values or rendered manifests. Provision and validate
+the external service and Secret before enabling this mode. The chart passes the
+URL through unchanged, so the selected application image must support the
+provider's Redis URL scheme, TLS configuration, and authentication method.
 
 ## Example Configurations
 

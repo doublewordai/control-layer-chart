@@ -414,7 +414,8 @@ postgresql:
 # (crypto-shred). See zdr-flex-encryption-plan.md.
 #
 # To turn ZDR on:
-#   1. keystore.enabled: true (deploys this Redis and points dwctl at it)
+#   1. keystore.enabled: true (uses the internal Redis by default; configure
+#      keystore.external to use an existing Redis service instead)
 #   2. add the wrap key(s) to secrets.controlLayer.data as
 #      DWCTL_KEYSTORE__WRAP_KEYS__<ID> (see that section), and point
 #      keystore.currentWrapKeyId at the matching id
@@ -427,9 +428,20 @@ postgresql:
 # redis_url and current_wrap_key_id are injected via env automatically; the TTL
 # defaults in dwctl (override in the `config` blob if needed).
 keystore:
-  # Deploy the internal keystore Redis StatefulSet. Off by default; when false,
-  # ZDR is inactive and flex bodies are stored in plaintext as before.
+  # Enable the ZDR keystore. This deploys an internal Redis StatefulSet unless
+  # external.enabled is true. Off by default; when false, ZDR is inactive and
+  # flex bodies are stored in plaintext as before.
   enabled: false
+
+  # Use a separately managed Redis service instead of deploying the internal
+  # Redis StatefulSet, Service, and managed StorageClass. Create this Secret
+  # before enabling external mode; its value must be a Redis connection URL
+  # supported by the application image (for example, redis:// or rediss://).
+  # Keep credentials in the Secret rather than passing the URL through values.
+  external:
+    enabled: false
+    existingSecret: ""
+    existingSecretKey: redis-url
 
   # Which wrap key seals new values. Must match a key id in
   # secrets.controlLayer.data (uppercased there as DWCTL_KEYSTORE__WRAP_KEYS__K1,

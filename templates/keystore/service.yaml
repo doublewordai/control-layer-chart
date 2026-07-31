@@ -1,4 +1,5 @@
-{{- if .Values.keystore.enabled }}
+{{- $external := .Values.keystore.external | default dict -}}
+{{- if and .Values.keystore.enabled (not ($external.enabled | default false)) }}
 apiVersion: v1
 kind: Service
 metadata:

@@ -169,15 +169,24 @@ needs the keystore env just as much as the API pods do. Callers guard on
   {{- if .Values.keystore.enabled }}
   {{- include "control-layer.keystoreEnv" . | nindent 12 }}
   {{- end }}
-redis_url always targets the in-cluster keystore Service; current_wrap_key_id comes
-from values. The wrap key(s) themselves are the only piece the operator supplies as
-a secret (secrets.controlLayer.data: DWCTL_KEYSTORE__WRAP_KEYS__<ID>).
+redis_url targets the in-cluster keystore Service by default. In external mode it
+is sourced from an existing Secret so credentials never pass through ordinary
+Helm values. current_wrap_key_id comes from values. The wrap key(s) are supplied
+as secrets.controlLayer.data: DWCTL_KEYSTORE__WRAP_KEYS__<ID>.
 default_ttl_seconds defaults in dwctl (7200s); set keystore.defaultTtlSeconds to
 override it.
 */}}
 {{- define "control-layer.keystoreEnv" -}}
+{{- $external := .Values.keystore.external | default dict -}}
 - name: DWCTL_KEYSTORE__REDIS_URL
+{{- if $external.enabled }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ required "keystore.external.existingSecret is required when external keystore is enabled" $external.existingSecret | quote }}
+      key: {{ required "keystore.external.existingSecretKey is required when external keystore is enabled" $external.existingSecretKey | quote }}
+{{- else }}
   value: "redis://{{ include "control-layer.fullname" . }}-keystore:6379"
+{{- end }}
 - name: DWCTL_KEYSTORE__CURRENT_WRAP_KEY_ID
   value: {{ .Values.keystore.currentWrapKeyId | quote }}
 {{- with .Values.keystore.defaultTtlSeconds }}
