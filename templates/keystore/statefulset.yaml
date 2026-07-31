@@ -1,4 +1,5 @@
-{{- if and .Values.keystore.enabled (not .Values.keystore.external.enabled) }}
+{{- $external := .Values.keystore.external | default dict -}}
+{{- if and .Values.keystore.enabled (not ($external.enabled | default false)) }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:

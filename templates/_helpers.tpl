@@ -177,12 +177,13 @@ default_ttl_seconds defaults in dwctl (7200s); set keystore.defaultTtlSeconds to
 override it.
 */}}
 {{- define "control-layer.keystoreEnv" -}}
+{{- $external := .Values.keystore.external | default dict -}}
 - name: DWCTL_KEYSTORE__REDIS_URL
-{{- if .Values.keystore.external.enabled }}
+{{- if $external.enabled }}
   valueFrom:
     secretKeyRef:
-      name: {{ required "keystore.external.existingSecret is required when external keystore is enabled" .Values.keystore.external.existingSecret | quote }}
-      key: {{ required "keystore.external.existingSecretKey is required when external keystore is enabled" .Values.keystore.external.existingSecretKey | quote }}
+      name: {{ required "keystore.external.existingSecret is required when external keystore is enabled" $external.existingSecret | quote }}
+      key: {{ required "keystore.external.existingSecretKey is required when external keystore is enabled" $external.existingSecretKey | quote }}
 {{- else }}
   value: "redis://{{ include "control-layer.fullname" . }}-keystore:6379"
 {{- end }}
