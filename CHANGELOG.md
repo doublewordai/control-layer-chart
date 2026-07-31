@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/doublewordai/control-layer-chart/compare/v1.5.0...v1.6.0) (2026-07-31)
+
+
+### Features
+
+* add graceful rollout controls ([#94](https://github.com/doublewordai/control-layer-chart/issues/94)) ([fb08aed](https://github.com/doublewordai/control-layer-chart/commit/fb08aedd6f3e6ddbc2a6a332264d18e105a56d41))
+
 ## [1.5.0](https://github.com/doublewordai/control-layer-chart/compare/v1.4.0...v1.5.0) (2026-07-31)
 
 
