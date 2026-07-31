@@ -171,7 +171,9 @@ delay keeps the process alive while Service and ingress routing converge, after
 which the control layer receives `SIGTERM` and uses its application-level
 graceful shutdown path. The termination grace supports requests lasting up to
 `connectionDrainTimeoutSeconds`, with additional time for endpoint propagation
-and cleanup.
+and cleanup. Keep `connectionDrainTimeoutSeconds` at `3600`: it mirrors the
+application's fixed maximum request wait and is validated rather than passed to
+the process as runtime configuration.
 
 `maxUnavailable: 0` and `maxSurge: 1` temporarily require capacity for one
 extra control-layer Pod. These settings apply only to the request-serving

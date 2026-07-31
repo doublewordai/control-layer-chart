@@ -208,3 +208,15 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: rollout timing values must be non-negative and connectionDrainTimeoutSeconds must be positive
+
+  - it: should require the control-layer application drain duration
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.connectionDrainTimeoutSeconds: 1
+      rollout.terminationGracePeriodSeconds: 3700
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout

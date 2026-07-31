@@ -2,6 +2,9 @@
 {{- if or (lt (int .Values.rollout.endpointDrainDelaySeconds) 0) (le (int .Values.rollout.connectionDrainTimeoutSeconds) 0) (lt (int .Values.rollout.minReadySeconds) 0) }}
 {{- fail "rollout timing values must be non-negative and connectionDrainTimeoutSeconds must be positive" }}
 {{- end }}
+{{- if ne (int .Values.rollout.connectionDrainTimeoutSeconds) 3600 }}
+{{- fail "rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout" }}
+{{- end }}
 {{- if or (ne .Values.rollout.strategy.type "RollingUpdate") (ne (toString .Values.rollout.strategy.rollingUpdate.maxUnavailable) "0") (ne (toString .Values.rollout.strategy.rollingUpdate.maxSurge) "1") }}
 {{- fail "rollout.strategy must use RollingUpdate with maxUnavailable 0 and maxSurge 1" }}
 {{- end }}
