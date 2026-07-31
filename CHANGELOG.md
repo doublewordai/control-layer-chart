@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/doublewordai/control-layer-chart/compare/v1.4.0...v1.5.0) (2026-07-31)
+
+
+### Features
+
+* support external keystore Redis services ([#92](https://github.com/doublewordai/control-layer-chart/issues/92)) ([f392e27](https://github.com/doublewordai/control-layer-chart/commit/f392e27cdd483a76a282579086928f3069cca3e8))
+
 ## [1.4.0](https://github.com/doublewordai/control-layer-chart/compare/v1.3.0...v1.4.0) (2026-07-21)
 
 
