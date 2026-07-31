@@ -95,3 +95,74 @@ tests:
       - equal:
           path: spec.template.metadata.labels["app.kubernetes.io/component"]
           value: control-layer
+
+  - it: should preserve the existing rollout behavior by default
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.strategy
+      - notExists:
+          path: spec.minReadySeconds
+      - notExists:
+          path: spec.progressDeadlineSeconds
+      - notExists:
+          path: spec.template.spec.terminationGracePeriodSeconds
+      - notExists:
+          path: spec.template.spec.containers[0].lifecycle
+
+  - it: should render the aligned graceful rollout contract when enabled
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.strategy.type: RollingUpdate
+      rollout.strategy.rollingUpdate.maxUnavailable: 0
+      rollout.strategy.rollingUpdate.maxSurge: 1
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.terminationGracePeriodSeconds: 3700
+      rollout.minReadySeconds: 15
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 0
+              maxSurge: 1
+      - equal:
+          path: spec.minReadySeconds
+          value: 15
+      - equal:
+          path: spec.progressDeadlineSeconds
+          value: 4200
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 3700
+      - equal:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command
+          value:
+            - /bin/sh
+            - -c
+            - sleep 15
+
+  - it: should reject a grace period that cannot outlast endpoint draining
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.terminationGracePeriodSeconds: 15
+      rollout.progressDeadlineSeconds: 4200
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout.terminationGracePeriodSeconds must be greater than rollout.endpointDrainDelaySeconds
+
+  - it: should reject a progress deadline that cannot outlast graceful termination
+    template: deployment.yaml
+    set:
+      rollout.enabled: true
+      rollout.endpointDrainDelaySeconds: 15
+      rollout.terminationGracePeriodSeconds: 3700
+      rollout.progressDeadlineSeconds: 3700
+    asserts:
+      - failedTemplate:
+          errorMessage: rollout.progressDeadlineSeconds must be greater than rollout.terminationGracePeriodSeconds
