@@ -28,7 +28,11 @@ metadata:
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
 spec:
+  {{- /* Argo CD reconciles continuously; a rendered replicas field would revert
+       every HPA scale-up on the next sync, so omit it when the HPA owns the count. */}}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   {{- if .Values.rollout.enabled }}
   strategy:
     {{- toYaml .Values.rollout.strategy | nindent 4 }}
@@ -114,6 +118,13 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- end }}
+            {{- /* Connection-budget group for this workload (database.replica_group).
+                 Skipped when the user supplies it: env names must be unique per
+                 container or Argo CD's strategic merge rejects the manifest. */}}
+            {{- if not (hasKey (.Values.env | default dict) "DWCTL_DATABASE__REPLICA_GROUP") }}
+            - name: DWCTL_DATABASE__REPLICA_GROUP
+              value: "control-layer"
             {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:

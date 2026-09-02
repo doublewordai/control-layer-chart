@@ -57,8 +57,27 @@ secrets:
       POSTGRES_USER: "clay"
       POSTGRES_PASSWORD: "clay_password"
 
-# This will set the replicaset count
+# This will set the replicaset count. Ignored (and omitted from the rendered
+# Deployment) when autoscaling.enabled is true so the HPA owns the count.
 replicaCount: 1
+
+# Horizontal Pod Autoscaler for the main control-layer (API) deployment.
+# metrics and behavior are raw autoscaling/v2 fields rendered verbatim.
+# Every deployment also receives DWCTL_DATABASE__REPLICA_GROUP (maps to
+# database.replica_group) so its pods join the right connection-budget group;
+# a user-supplied env entry with the same name takes precedence.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  metrics: []
+  # - type: Resource
+  #   resource:
+  #     name: cpu
+  #     target:
+  #       type: Utilization
+  #       averageUtilization: 75
+  behavior: {}
 
 # Opt-in rollout controls for request-serving control-layer pods. Enabling this
 # keeps replacement capacity available while existing requests drain.
@@ -215,8 +234,23 @@ fusillade:
   # Set to true to deploy fusillade daemon separately from the control layer
   enabled: false
 
-  # Number of fusillade daemon replicas
+  # Number of fusillade daemon replicas. Ignored (and omitted from the rendered
+  # Deployment) for any fusillade workload whose effective autoscaling is enabled.
   replicaCount: 1
+
+  # Horizontal Pod Autoscaler defaults for fusillade workloads: applies to the
+  # single daemon deployment and, in split mode, to both the request and batch
+  # deployments. Override per role via fusillade.split.<role>.autoscaling
+  # (merged over this block). Same schema as the top-level autoscaling block.
+  # Pods receive DWCTL_DATABASE__REPLICA_GROUP = fusillade | fusillade-request |
+  # fusillade-batch; per-role pool totals arrive through the existing
+  # DWCTL_DATABASE__*POOL__* env mapping generated from each role's database dict.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    metrics: []
+    behavior: {}
 
   # Optional daemon mode for the standard single fusillade deployment.
   # Leave empty to use the application's default mode (both).
@@ -232,11 +266,14 @@ fusillade:
   # settings such as replicaCount, image, resources, pod metadata, security
   # context, scheduling, probes, and database pools can be overridden per daemon.
   # env is merged after global/fusillade env, while volumes and volumeMounts are
-  # appended to the top-level lists.
+  # appended to the top-level lists. autoscaling is merged over
+  # fusillade.autoscaling (keys set here win, e.g. autoscaling.enabled: true
+  # for one role only).
   split:
     enabled: false
     request:
       enabled: true
+      autoscaling: {}
       image: {}
       resources: {}
       podAnnotations: {}
@@ -255,6 +292,7 @@ fusillade:
       volumeMounts: []
     batch:
       enabled: true
+      autoscaling: {}
       image: {}
       resources: {}
       podAnnotations: {}

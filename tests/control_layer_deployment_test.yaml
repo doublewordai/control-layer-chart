@@ -220,3 +220,44 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout
+
+  - it: should render replicas by default (no autoscaling)
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should omit replicas when autoscaling is enabled
+    template: deployment.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - isNull:
+          path: spec.replicas
+
+  - it: should inject DWCTL_DATABASE__REPLICA_GROUP for the control-layer component
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_GROUP
+            value: control-layer
+
+  - it: should not duplicate DWCTL_DATABASE__REPLICA_GROUP when the user sets it
+    template: deployment.yaml
+    set:
+      env:
+        DWCTL_DATABASE__REPLICA_GROUP: custom-group
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_GROUP
+            value: custom-group
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_DATABASE__REPLICA_GROUP
+            value: control-layer

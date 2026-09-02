@@ -69,7 +69,12 @@ The following table lists the configurable parameters and their default values. 
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `replicaCount` | Number of replicas | `1` |
+| `replicaCount` | Number of replicas (omitted from the Deployment when `autoscaling.enabled`) | `1` |
+| `autoscaling.enabled` | Render a HorizontalPodAutoscaler for the control-layer deployment | `false` |
+| `autoscaling.minReplicas` | HPA minimum replicas | `1` |
+| `autoscaling.maxReplicas` | HPA maximum replicas | `3` |
+| `autoscaling.metrics` | Raw `autoscaling/v2` metrics list, rendered verbatim | `[]` |
+| `autoscaling.behavior` | Raw `autoscaling/v2` behavior block, rendered verbatim | `{}` |
 | `image.repository` | Container image repository | `ghcr.io/doublewordai/control-layer` |
 | `image.tag` | Container image tag | Chart appVersion |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
@@ -191,16 +196,19 @@ The fusillade daemon handles background batch processing tasks. By default, it r
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `fusillade.enabled` | Deploy fusillade as a separate deployment | `false` |
-| `fusillade.replicaCount` | Number of fusillade replicas | `1` |
+| `fusillade.replicaCount` | Number of fusillade replicas (omitted from a Deployment whose effective autoscaling is enabled) | `1` |
+| `fusillade.autoscaling` | HPA defaults for the fusillade daemon and both split roles (`enabled`, `minReplicas`, `maxReplicas`, `metrics`, `behavior`) | `enabled: false` |
 | `fusillade.mode` | Optional daemon mode for the standard fusillade deployment (`both`, `request_only`, `batch_only`); empty uses the application default | `""` |
 | `fusillade.split.enabled` | Render separate request-only and batch-only daemon deployments | `false` |
 | `fusillade.split.request.enabled` | Render the request-only daemon deployment | `true` |
 | `fusillade.split.request.replicaCount` | Number of request daemon replicas | inherits `fusillade.replicaCount` |
+| `fusillade.split.request.autoscaling` | HPA override for the request daemon | merged over `fusillade.autoscaling` |
 | `fusillade.split.request.resources` | CPU/Memory requests/limits for request daemon pods | inherits `fusillade.resources` |
 | `fusillade.split.request.env` | Additional environment variables for request daemon pods | merged after `env` and `fusillade.env` |
 | `fusillade.split.request.database` | Database pool overrides for request daemon pods | merged over `fusillade.database` |
 | `fusillade.split.batch.enabled` | Render the batch-only daemon deployment | `true` |
 | `fusillade.split.batch.replicaCount` | Number of batch daemon replicas | inherits `fusillade.replicaCount` |
+| `fusillade.split.batch.autoscaling` | HPA override for the batch daemon | merged over `fusillade.autoscaling` |
 | `fusillade.split.batch.resources` | CPU/Memory requests/limits for batch daemon pods | inherits `fusillade.resources` |
 | `fusillade.split.batch.env` | Additional environment variables for batch daemon pods | merged after `env` and `fusillade.env` |
 | `fusillade.split.batch.database` | Database pool overrides for batch daemon pods | merged over `fusillade.database` |

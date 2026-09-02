@@ -185,8 +185,11 @@ tests:
   - it: should not set DASHBOARD_BOOTSTRAP_JS env var in deployment with default values
     template: deployment.yaml
     asserts:
-      - isNullOrEmpty:
+      - notContains:
           path: spec.template.spec.containers[0].env
+          content:
+            name: DASHBOARD_BOOTSTRAP_JS
+          any: true
 
   - it: should include bootstrap.js in separate configmap when enabled
     set:

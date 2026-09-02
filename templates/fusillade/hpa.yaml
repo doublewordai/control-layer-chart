@@ -1,0 +1,58 @@
+{{- /*
+One HorizontalPodAutoscaler per fusillade workload whose effective autoscaling
+is enabled. Iterates the same workloads as fusillade/deployment.yaml (single
+mode: -fusillade; split mode: -fusillade-request / -fusillade-batch). Effective
+config = fusillade.autoscaling overlaid with the per-role autoscaling block.
+*/}}
+{{- define "control-layer.fusillade.hpa" -}}
+{{- $root := .root -}}
+{{- $fusillade := $root.Values.fusillade -}}
+{{- $config := .config | default dict -}}
+{{- $component := .component -}}
+{{- $suffix := .suffix -}}
+{{- $autoscaling := mergeOverwrite (deepCopy ($fusillade.autoscaling | default dict)) (get $config "autoscaling" | default dict) -}}
+{{- if $autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
+  labels:
+    {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
+  minReplicas: {{ $autoscaling.minReplicas }}
+  maxReplicas: {{ $autoscaling.maxReplicas }}
+  {{- with $autoscaling.metrics }}
+  metrics:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{- if .Values.fusillade.enabled }}
+{{- $split := .Values.fusillade.split | default dict -}}
+{{- if $split.enabled }}
+{{- $request := $split.request | default dict -}}
+{{- $batch := $split.batch | default dict -}}
+{{- $requestEnabled := true -}}
+{{- $batchEnabled := true -}}
+{{- if hasKey $request "enabled" }}{{- $requestEnabled = $request.enabled -}}{{- end -}}
+{{- if hasKey $batch "enabled" }}{{- $batchEnabled = $batch.enabled -}}{{- end -}}
+{{- if $requestEnabled }}
+{{- include "control-layer.fusillade.hpa" (dict "root" . "suffix" "-fusillade-request" "component" "fusillade-request" "config" $request) }}
+{{- end }}
+{{- if $batchEnabled }}
+{{- include "control-layer.fusillade.hpa" (dict "root" . "suffix" "-fusillade-batch" "component" "fusillade-batch" "config" $batch) }}
+{{- end }}
+{{- else }}
+{{- include "control-layer.fusillade.hpa" (dict "root" . "suffix" "-fusillade" "component" "fusillade" "config" dict) }}
+{{- end }}
+{{- end }}

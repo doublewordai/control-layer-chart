@@ -10,6 +10,8 @@
 {{- $database := mergeOverwrite (deepCopy ($fusillade.database | default dict)) (get $config "database" | default dict) -}}
 {{- $podAnnotations := mergeOverwrite (deepCopy ($fusillade.podAnnotations | default dict)) (get $config "podAnnotations" | default dict) -}}
 {{- $podLabels := mergeOverwrite (deepCopy ($fusillade.podLabels | default dict)) (get $config "podLabels" | default dict) -}}
+{{- $autoscaling := mergeOverwrite (deepCopy ($fusillade.autoscaling | default dict)) (get $config "autoscaling" | default dict) -}}
+{{- $userEnv := mergeOverwrite (deepCopy ($root.Values.env | default dict)) (deepCopy ($fusillade.env | default dict)) (get $config "env" | default dict) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +19,11 @@ metadata:
   labels:
     {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
 spec:
+  {{- /* Argo CD reconciles continuously; a rendered replicas field would revert
+       every HPA scale-up on the next sync, so omit it when the HPA owns the count. */}}
+  {{- if not $autoscaling.enabled }}
   replicas: {{- if hasKey $config "replicaCount" }} {{ get $config "replicaCount" }}{{- else }} {{ $fusillade.replicaCount }}{{- end }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "control-layer.fusillade.selectorLabelsFor" (dict "root" $root "component" $component) | nindent 6 }}
@@ -103,6 +109,13 @@ spec:
             {{- range $key, $value := (get $config "env" | default dict) }}
             - name: {{ $key }}
               value: {{ $value | quote }}
+            {{- end }}
+            {{- /* Connection-budget group for this workload (database.replica_group).
+                 Skipped when any user env layer supplies it: env names must be unique
+                 per container or Argo CD's strategic merge rejects the manifest. */}}
+            {{- if not (hasKey $userEnv "DWCTL_DATABASE__REPLICA_GROUP") }}
+            - name: DWCTL_DATABASE__REPLICA_GROUP
+              value: {{ $component | quote }}
             {{- end }}
             # Enable fusillade daemon on these pods
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
