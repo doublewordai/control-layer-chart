@@ -473,7 +473,7 @@ keystore:
   image:
     repository: redis
     pullPolicy: IfNotPresent
-    tag: "7.4"
+    tag: "8.10"
 
   # Data persistence (append-only file). Keys and their absolute TTLs survive a
   # pod restart or reschedule, so the crypto-shred clock is not reset.
