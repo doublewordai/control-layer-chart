@@ -220,3 +220,19 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout
+
+  - it: should render replicas by default (no autoscaling)
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+
+  - it: should omit replicas when autoscaling is enabled
+    template: deployment.yaml
+    set:
+      autoscaling.enabled: true
+    asserts:
+      - isNull:
+          path: spec.replicas
+
