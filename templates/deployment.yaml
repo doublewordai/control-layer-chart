@@ -119,13 +119,6 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
-            {{- /* Connection-budget group for this workload (database.replica_group).
-                 Skipped when the user supplies it: env names must be unique per
-                 container or Argo CD's strategic merge rejects the manifest. */}}
-            {{- if not (hasKey (.Values.env | default dict) "DWCTL_DATABASE__REPLICA_GROUP") }}
-            - name: DWCTL_DATABASE__REPLICA_GROUP
-              value: "control-layer"
-            {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

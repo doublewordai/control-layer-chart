@@ -236,28 +236,3 @@ tests:
       - isNull:
           path: spec.replicas
 
-  - it: should inject DWCTL_DATABASE__REPLICA_GROUP for the control-layer component
-    template: deployment.yaml
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: DWCTL_DATABASE__REPLICA_GROUP
-            value: control-layer
-
-  - it: should not duplicate DWCTL_DATABASE__REPLICA_GROUP when the user sets it
-    template: deployment.yaml
-    set:
-      env:
-        DWCTL_DATABASE__REPLICA_GROUP: custom-group
-    asserts:
-      - contains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: DWCTL_DATABASE__REPLICA_GROUP
-            value: custom-group
-      - notContains:
-          path: spec.template.spec.containers[0].env
-          content:
-            name: DWCTL_DATABASE__REPLICA_GROUP
-            value: control-layer

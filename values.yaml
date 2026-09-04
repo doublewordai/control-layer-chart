@@ -63,9 +63,6 @@ replicaCount: 1
 
 # Horizontal Pod Autoscaler for the main control-layer (API) deployment.
 # metrics and behavior are raw autoscaling/v2 fields rendered verbatim.
-# Every deployment also receives DWCTL_DATABASE__REPLICA_GROUP (maps to
-# database.replica_group) so its pods join the right connection-budget group;
-# a user-supplied env entry with the same name takes precedence.
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -242,9 +239,6 @@ fusillade:
   # single daemon deployment and, in split mode, to both the request and batch
   # deployments. Override per role via fusillade.split.<role>.autoscaling
   # (merged over this block). Same schema as the top-level autoscaling block.
-  # Pods receive DWCTL_DATABASE__REPLICA_GROUP = fusillade | fusillade-request |
-  # fusillade-batch; per-role pool totals arrive through the existing
-  # DWCTL_DATABASE__*POOL__* env mapping generated from each role's database dict.
   autoscaling:
     enabled: false
     minReplicas: 1

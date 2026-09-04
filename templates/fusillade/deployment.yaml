@@ -11,7 +11,6 @@
 {{- $podAnnotations := mergeOverwrite (deepCopy ($fusillade.podAnnotations | default dict)) (get $config "podAnnotations" | default dict) -}}
 {{- $podLabels := mergeOverwrite (deepCopy ($fusillade.podLabels | default dict)) (get $config "podLabels" | default dict) -}}
 {{- $autoscaling := mergeOverwrite (deepCopy ($fusillade.autoscaling | default dict)) (get $config "autoscaling" | default dict) -}}
-{{- $userEnv := mergeOverwrite (deepCopy ($root.Values.env | default dict)) (deepCopy ($fusillade.env | default dict)) (get $config "env" | default dict) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -109,13 +108,6 @@ spec:
             {{- range $key, $value := (get $config "env" | default dict) }}
             - name: {{ $key }}
               value: {{ $value | quote }}
-            {{- end }}
-            {{- /* Connection-budget group for this workload (database.replica_group).
-                 Skipped when any user env layer supplies it: env names must be unique
-                 per container or Argo CD's strategic merge rejects the manifest. */}}
-            {{- if not (hasKey $userEnv "DWCTL_DATABASE__REPLICA_GROUP") }}
-            - name: DWCTL_DATABASE__REPLICA_GROUP
-              value: {{ $component | quote }}
             {{- end }}
             # Enable fusillade daemon on these pods
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
