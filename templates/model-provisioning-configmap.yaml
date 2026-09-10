@@ -1,16 +1,17 @@
 {{- if .Values.modelProvisioning.enabled }}
-{{- if eq (len .Values.modelProvisioning.files) 0 }}
-{{- fail "modelProvisioning.files must contain at least one model document when model provisioning is enabled" }}
-{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ include "control-layer.fullname" . }}-model-provisioning
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+{{- if .Values.modelProvisioning.files }}
 data:
   {{- range $name, $content := .Values.modelProvisioning.files }}
   {{ $name | quote }}: |
     {{- $content | nindent 4 }}
   {{- end }}
+{{- else }}
+data: {}
+{{- end }}
 {{- end }}

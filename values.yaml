@@ -156,9 +156,8 @@ volumeMounts: []
 #   readOnly: true
 
 # Declarative model catalog loaded transactionally by dwctl during startup.
-# Each map entry becomes one YAML file in the mounted directory. Enabling this
-# with no files is an error so a broken extraction step cannot silently clear
-# provisioning ownership.
+# Each map entry becomes one YAML file in the mounted directory. An enabled
+# catalog with no files mounts an empty directory and is a startup no-op.
 modelProvisioning:
   enabled: false
   mountPath: /app/model-provisioning.d

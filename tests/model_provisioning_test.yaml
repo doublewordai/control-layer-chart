@@ -15,13 +15,15 @@ tests:
           content:
             name: model-provisioning
 
-  - it: should reject an enabled empty model catalog
+  - it: should render an enabled empty model catalog
     template: model-provisioning-configmap.yaml
     set:
       modelProvisioning.enabled: true
     asserts:
-      - failedTemplate:
-          errorMessage: modelProvisioning.files must contain at least one model document when model provisioning is enabled
+      - isKind:
+          of: ConfigMap
+      - isEmpty:
+          path: data
 
   - it: should render the catalog configmap
     template: model-provisioning-configmap.yaml
