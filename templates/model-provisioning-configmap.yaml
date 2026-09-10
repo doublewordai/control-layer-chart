@@ -7,9 +7,9 @@ metadata:
     {{- include "control-layer.labels" . | nindent 4 }}
 {{- if .Values.modelProvisioning.files }}
 data:
-  {{- range $name, $content := .Values.modelProvisioning.files }}
+  {{- range $name := keys .Values.modelProvisioning.files | sortAlpha }}
   {{ $name | quote }}: |
-    {{- $content | nindent 4 }}
+    {{- index $.Values.modelProvisioning.files $name | nindent 4 }}
   {{- end }}
 {{- else }}
 data: {}
