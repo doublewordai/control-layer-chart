@@ -111,6 +111,70 @@ serviceMonitor:
   scrapeTimeout: 10s
   labels: {}
 
+# Schema migrations.
+#
+# By default every application pod applies pending migrations at startup
+# (`migrations.mode: run` in the image's config), which couples DDL to pod
+# lifecycle and startup probes. Enabling `migrations.job` moves that work into
+# a pre-rollout Job that runs `dwctl migrate` with the exact application
+# image, and switches every application pod to `DWCTL_MIGRATIONS__MODE=check`:
+# pods never execute DDL and refuse to start on a database that is behind
+# their release (a database that is AHEAD is accepted, so the previous
+# release's replicas keep serving during the migration).
+#
+# The Job is an Argo CD PreSync hook and a Helm pre-install/pre-upgrade hook;
+# both wait for it and block the rollout when it fails, leaving the previous
+# ReplicaSets untouched. Requires an image with the `migrate` subcommand
+# (control-layer >= 11.11).
+migrations:
+  job:
+    enabled: false
+    # Argo CD sync waves within the PreSync phase. The Job's config/secret
+    # copies use `prerequisiteSyncWave` so they exist before the Job's pod.
+    # Environments that stamp a release-wide sync-wave transformer override
+    # both; same-wave ordering (ConfigMap, Secret before Job) still holds.
+    syncWave: "-5"
+    prerequisiteSyncWave: "-10"
+    argocd:
+      enabled: true
+    helmHooks:
+      enabled: true
+    # Pod-level retries inside one Job. Every run is safe to repeat.
+    backoffLimit: 2
+    # Upper bound for the whole Job including retries. Concurrent index
+    # builds on large tables can take a long time; a Job that hits this
+    # deadline fails the sync and the next sync resumes where it left off.
+    activeDeadlineSeconds: 3600
+    # Leave unset to keep finished Jobs (and their logs) until the next sync
+    # replaces them. Set a number of seconds to garbage-collect them earlier.
+    ttlSecondsAfterFinished: null
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        memory: 1Gi
+    # Extra environment for the Job only (the top-level `env` also applies).
+    env: {}
+    # Extra Secrets loaded via envFrom after the primary one.
+    extraExistingSecrets: []
+    # Credentials rendered into a hook-phase Secret for the Job. Set this when
+    # the application's Secret is updated in the same sync (rotated
+    # DATABASE_URL after a database refresh): a PreSync hook runs before
+    # ordinary Secrets are updated and would otherwise use the previous
+    # credentials. When empty, the Job reads the chart's application Secret.
+    secretData: {}
+    annotations: {}
+    podAnnotations: {}
+    podLabels: {}
+    volumes: []
+    volumeMounts: []
+  # DWCTL_MIGRATIONS__MODE for application pods when the Job is enabled.
+  # `check` is the only mode that makes the Job meaningful; `run` reverts to
+  # in-pod migrations while keeping the Job (useful during the first
+  # transition).
+  startupMode: check
+
 # Environment variables
 env: {}
 
