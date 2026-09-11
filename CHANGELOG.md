@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/doublewordai/control-layer-chart/compare/v1.6.0...v1.7.0) (2026-09-11)
+
+
+### Features
+
+* mount declarative model provisioning catalog ([#98](https://github.com/doublewordai/control-layer-chart/issues/98)) ([f4df3a8](https://github.com/doublewordai/control-layer-chart/commit/f4df3a8762bc143984e2e78f79722106aeb4e7d1))
+
 ## [1.6.0](https://github.com/doublewordai/control-layer-chart/compare/v1.5.0...v1.6.0) (2026-07-31)
 
 
