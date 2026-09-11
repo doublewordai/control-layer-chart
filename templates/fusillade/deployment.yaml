@@ -92,6 +92,11 @@ spec:
             {{- if $root.Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
+            {{- if $root.Values.migrations.job.enabled }}
+            # The migration Job owns DDL; pods only verify schema compatibility.
+            - name: DWCTL_MIGRATIONS__MODE
+              value: {{ $root.Values.migrations.startupMode | quote }}
+            {{- end }}
             {{- range $key, $value := $root.Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

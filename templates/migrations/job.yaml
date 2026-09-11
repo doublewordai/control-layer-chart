@@ -1,0 +1,145 @@
+{{- /*
+  Pre-rollout schema migration Job.
+
+  Runs `dwctl migrate` with the exact application image before any Deployment
+  of a release is applied, so that:
+
+    * application pods never execute DDL (they start with
+      DWCTL_MIGRATIONS__MODE=check and refuse to serve a database that is
+      behind their release),
+    * a failed migration fails the sync before the Deployments change, so the
+      previous release's replicas keep serving,
+    * interrupted concurrent index builds are repaired by the next run instead
+      of blocking every new pod.
+
+  The Job is an Argo CD PreSync hook and a Helm pre-install/pre-upgrade hook.
+  Both hook systems run it before the Sync phase / the upgrade and wait for it
+  to complete; both block the rollout when it fails.
+
+  It reads its config and credentials from hook-phase copies rendered by
+  migrations/config.yaml and migrations/secret.yaml, never from the chart's
+  ordinary ConfigMap/Secret: PreSync runs before those are updated (or, on a
+  first install, before they exist), so a Job that mounted them would migrate
+  the wrong database with the previous credentials.
+
+  Naming: the image reference is hashed into the Job name, so every release
+  is a distinct Job and a re-sync of the same release replaces its own Job
+  (hook-delete-policy BeforeHookCreation). Argo CD serialises operations per
+  Application, so an in-progress Job is never replaced by an overlapping sync;
+  only an explicit "terminate" does that, and the next run recovers.
+*/ -}}
+{{- if .Values.migrations.job.enabled }}
+{{- $name := include "control-layer.migrations.jobName" . }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "control-layer.migrations.labels" . | nindent 4 }}
+  annotations:
+    {{- include "control-layer.migrations.hookAnnotations" (dict "root" . "weight" "0" "wave" .Values.migrations.job.syncWave) | nindent 4 }}
+    {{- with .Values.migrations.job.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  backoffLimit: {{ .Values.migrations.job.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migrations.job.activeDeadlineSeconds }}
+  {{- if not (kindIs "invalid" .Values.migrations.job.ttlSecondsAfterFinished) }}
+  ttlSecondsAfterFinished: {{ .Values.migrations.job.ttlSecondsAfterFinished }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "control-layer.migrations.labels" . | nindent 8 }}
+        {{- with .Values.migrations.job.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/migrations/config.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/migrations/secret.yaml") . | sha256sum }}
+        {{- with .Values.migrations.job.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - migrate
+          {{- /*
+            Kubernetes resolves duplicate envFrom keys from the LAST source, so
+            the hook-phase Secret comes last: its values must win over any
+            Sync-phase Secret that has not been updated yet at PreSync time.
+          */}}
+          envFrom:
+            {{- if not (include "control-layer.migrations.hasSecretData" .) }}
+            - secretRef:
+                name: {{ include "control-layer.secretName" . }}
+            {{- end }}
+            {{- range .Values.secrets.controlLayer.extraExistingSecrets }}
+            - secretRef:
+                name: {{ . | quote }}
+            {{- end }}
+            {{- range .Values.migrations.job.extraExistingSecrets }}
+            - secretRef:
+                name: {{ . | quote }}
+            {{- end }}
+            {{- if include "control-layer.migrations.hasSecretData" . }}
+            - secretRef:
+                name: {{ include "control-layer.migrations.secretName" . }}
+            {{- end }}
+          {{- $env := merge (deepCopy .Values.migrations.job.env) .Values.env }}
+          {{- with $env }}
+          env:
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.migrations.job.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: control-layer-config.yaml
+              readOnly: true
+            {{- with .Values.migrations.job.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "control-layer.migrations.configMapName" . }}
+        {{- with .Values.migrations.job.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

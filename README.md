@@ -184,6 +184,50 @@ The progress deadline must be greater than the termination grace, and the
 termination grace must be greater than the endpoint drain delay. The chart
 rejects enabled configurations that violate either requirement.
 
+### Schema migrations as a pre-rollout Job
+
+By default every application pod applies pending schema migrations when it
+starts. For rolling deployments that is fragile: DDL is tied to pod lifecycle
+and startup probes, and a migration that fails part-way keeps every new pod
+from starting. Enable the migration Job instead:
+
+```yaml
+migrations:
+  job:
+    enabled: true
+```
+
+The chart then renders a Job that runs `dwctl migrate` with the exact
+application image, as an Argo CD `PreSync` hook and a Helm
+`pre-install,pre-upgrade` hook, together with hook-phase copies of the config
+and credentials it needs (a `PreSync` hook runs before the chart's ordinary
+ConfigMap and Secret are updated). Both hook systems wait for the Job and
+abort the rollout when it fails, leaving the previous ReplicaSets serving. The
+Job repairs interrupted `CONCURRENTLY` index builds before applying migrations
+and verifies them afterwards; every run is safe to repeat.
+
+Application and Fusillade pods get `DWCTL_MIGRATIONS__MODE=check`: they never
+execute DDL and refuse to start on a database that is behind their release,
+while accepting one that is ahead, so old replicas keep serving during an
+additive migration.
+
+When credentials are updated in the same sync as the image (a rotated
+`DATABASE_URL` after a database refresh), pass them to the Job explicitly so
+it does not read the previous values from a not-yet-updated Secret:
+
+```yaml
+migrations:
+  job:
+    enabled: true
+    secretData:
+      DATABASE_URL: postgres://...   # rendered into the Job's hook-phase Secret
+```
+
+Requires an image with the `migrate` subcommand (control-layer ≥ 11.11).
+`migrations.job.activeDeadlineSeconds`, `backoffLimit`, `resources` and
+`ttlSecondsAfterFinished` bound the Job; finished Jobs are kept until the next
+sync replaces them so a failure can be diagnosed from its logs.
+
 ### Fusillade Daemon Configuration
 
 The fusillade daemon handles background batch processing tasks. By default, it runs within the control layer pods based on leader election. You can optionally deploy it as a separate deployment for better resource isolation and independent scaling.
