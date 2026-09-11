@@ -1,0 +1,81 @@
+suite: test model provisioning catalog
+templates:
+  - deployment.yaml
+  - model-provisioning-configmap.yaml
+  - configmap.yaml
+  - secret.yaml
+tests:
+  - it: should not mount a model catalog by default
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/model-provisioning"]
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: model-provisioning
+
+  - it: should render an enabled empty model catalog
+    template: model-provisioning-configmap.yaml
+    set:
+      modelProvisioning.enabled: true
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - isEmpty:
+          path: data
+
+  - it: should render the catalog configmap
+    template: model-provisioning-configmap.yaml
+    set:
+      modelProvisioning.enabled: true
+      modelProvisioning.files:
+        model.yaml: |
+          model: org/model
+          clay:
+            alias: org/model
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-model-provisioning
+      - matchRegex:
+          path: data["model.yaml"]
+          pattern: "model: org/model"
+
+  - it: should configure and mount the catalog
+    template: deployment.yaml
+    set:
+      modelProvisioning.enabled: true
+      modelProvisioning.mountPath: /catalog
+      modelProvisioning.files:
+        model.yaml: |
+          model: org/model
+          clay:
+            alias: org/model
+    asserts:
+      - exists:
+          path: spec.template.metadata.annotations["checksum/model-provisioning"]
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MODEL_PROVISIONING__ENABLED
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MODEL_PROVISIONING__DIRECTORY
+            value: /catalog
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: model-provisioning
+            mountPath: /catalog
+            readOnly: true
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: model-provisioning
+            configMap:
+              name: RELEASE-NAME-control-layer-model-provisioning

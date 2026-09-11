@@ -1,0 +1,17 @@
+{{- if .Values.modelProvisioning.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-layer.fullname" . }}-model-provisioning
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+{{- if .Values.modelProvisioning.files }}
+data:
+  {{- range $name := keys .Values.modelProvisioning.files | sortAlpha }}
+  {{ $name | quote }}: |
+    {{- index $.Values.modelProvisioning.files $name | nindent 4 }}
+  {{- end }}
+{{- else }}
+data: {}
+{{- end }}
+{{- end }}
