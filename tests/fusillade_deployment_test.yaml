@@ -371,3 +371,20 @@ tests:
           content:
             name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
             value: "request_only"
+
+  - it: should keep replicas in split mode by default
+    template: fusillade/deployment.yaml
+    set:
+      fusillade:
+        enabled: true
+        split:
+          enabled: true
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1
+        documentIndex: 0
+      - equal:
+          path: spec.replicas
+          value: 1
+        documentIndex: 1

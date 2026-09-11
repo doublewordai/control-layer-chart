@@ -1,0 +1,242 @@
+suite: hpa
+templates:
+  - hpa.yaml
+  - fusillade/hpa.yaml
+  - deployment.yaml
+  - fusillade/deployment.yaml
+  - configmap.yaml
+  - secret.yaml
+tests:
+  - it: renders no HPA by default
+    template: hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no fusillade HPA by default
+    template: fusillade/hpa.yaml
+    set:
+      fusillade.enabled: true
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders main HPA and omits replicas when enabled
+    set:
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 4
+        metrics:
+          - type: Resource
+            resource:
+              name: cpu
+              target:
+                type: Utilization
+                averageUtilization: 75
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 300
+    template: hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isAPIVersion:
+          of: autoscaling/v2
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 4
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: 75
+      - equal:
+          path: spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 300
+
+  - it: omits metrics and behavior keys when empty
+    set:
+      autoscaling.enabled: true
+    template: hpa.yaml
+    asserts:
+      - isNull:
+          path: spec.metrics
+      - isNull:
+          path: spec.behavior
+
+  - it: omits replicas from main deployment when autoscaling enabled
+    set:
+      autoscaling.enabled: true
+    template: deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.replicas
+
+  - it: renders single-mode fusillade HPA from fusillade default
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: true
+          minReplicas: 1
+          maxReplicas: 5
+    template: fusillade/hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-fusillade
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade
+      - equal:
+          path: spec.maxReplicas
+          value: 5
+
+  - it: omits replicas from single-mode fusillade deployment when autoscaling enabled
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: true
+    template: fusillade/deployment.yaml
+    asserts:
+      - isNull:
+          path: spec.replicas
+
+  - it: renders one HPA per split role from fusillade default
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: true
+        split:
+          enabled: true
+    template: fusillade/hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+        documentIndex: 0
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade-request
+        documentIndex: 0
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade-batch
+        documentIndex: 1
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: fusillade-batch
+        documentIndex: 1
+
+  - it: per-role override beats fusillade default
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: false
+        split:
+          enabled: true
+          request:
+            autoscaling:
+              enabled: true
+              minReplicas: 1
+              maxReplicas: 3
+    template: fusillade/hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+      - equal:
+          path: spec.maxReplicas
+          value: 3
+
+  - it: per-role override can disable autoscaling for one role and merges over defaults
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: true
+          minReplicas: 2
+          maxReplicas: 6
+        split:
+          enabled: true
+          batch:
+            autoscaling:
+              enabled: false
+    template: fusillade/hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade-request
+      - equal:
+          path: spec.minReplicas
+          value: 2
+      - equal:
+          path: spec.maxReplicas
+          value: 6
+
+  - it: omits replicas only from split roles whose autoscaling is enabled
+    set:
+      fusillade:
+        enabled: true
+        replicaCount: 2
+        split:
+          enabled: true
+          request:
+            autoscaling:
+              enabled: true
+    template: fusillade/deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 2
+      - isNull:
+          path: spec.replicas
+        documentIndex: 0
+      - equal:
+          path: spec.replicas
+          value: 2
+        documentIndex: 1
+
+  - it: skips HPA for a disabled split role
+    set:
+      fusillade:
+        enabled: true
+        autoscaling:
+          enabled: true
+        split:
+          enabled: true
+          request:
+            enabled: false
+    template: fusillade/hpa.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: RELEASE-NAME-control-layer-fusillade-batch

@@ -28,7 +28,11 @@ metadata:
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
 spec:
+  {{- /* Argo CD reconciles continuously; a rendered replicas field would revert
+       every HPA scale-up on the next sync, so omit it when the HPA owns the count. */}}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   {{- if .Values.rollout.enabled }}
   strategy:
     {{- toYaml .Values.rollout.strategy | nindent 4 }}
