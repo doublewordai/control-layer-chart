@@ -275,6 +275,50 @@ the external service and Secret before enabling this mode. The chart passes the
 URL through unchanged, so the selected application image must support the
 provider's Redis URL scheme, TLS configuration, and authentication method.
 
+### Chunk Relay Redis
+
+Enabling flex live-streaming (`chunkRelay.enabled: true`) deploys a
+single-instance Redis Deployment and Service by default, used to relay real
+per-token deltas over Redis Streams instead of poll-and-replay. This is a
+separate Redis from the keystore above and intentionally so: chunk-relay
+traffic is much higher QPS, and sharing an instance risks a streaming burst
+affecting ZDR keystore latency. It also needs no persistence - a restart just
+drops in-flight relayed chunks, and dwctl's poll-and-replay path covers those
+requests as before.
+
+```yaml
+chunkRelay:
+  enabled: true
+```
+
+To use a separately managed Redis service instead, create a Secret in the
+release namespace and reference it the same way as the keystore's external
+mode:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-chunk-relay
+type: Opaque
+data:
+  redis-url: <base64-encoded-redis-connection-url>
+```
+
+```yaml
+chunkRelay:
+  enabled: true
+  external:
+    enabled: true
+    existingSecret: external-chunk-relay
+    existingSecretKey: redis-url
+```
+
+Both the control layer and Fusillade workloads read
+`DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL` directly from the Secret in
+external mode, for the same reason as the keystore: the connection URL never
+passes through ordinary Helm values or rendered manifests.
+
 ## Example Configurations
 
 ### With External Database

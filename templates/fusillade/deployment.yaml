@@ -92,6 +92,9 @@ spec:
             {{- if $root.Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
+            {{- if $root.Values.chunkRelay.enabled }}
+            {{- include "control-layer.chunkRelayEnv" $root | nindent 12 }}
+            {{- end }}
             {{- range $key, $value := $root.Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
