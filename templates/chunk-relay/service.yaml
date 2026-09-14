@@ -1,0 +1,18 @@
+{{- $external := .Values.chunkRelay.external | default dict -}}
+{{- if and .Values.chunkRelay.enabled (not ($external.enabled | default false)) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "control-layer.fullname" . }}-chunk-relay
+  labels:
+    {{- include "control-layer.chunkRelay.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis
+  selector:
+    {{- include "control-layer.chunkRelay.selectorLabels" . | nindent 4 }}
+{{- end }}

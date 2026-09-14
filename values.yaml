@@ -214,6 +214,10 @@ config: |
   #   # in-flight requests self-destruct before they are processed.
   #   default_ttl_seconds: 7200
 
+  # Flex live-streaming chunk relay: nothing is needed here for a default
+  # setup either. enabled and chunk_relay.redis_url are injected via env
+  # (from chunkRelay.* values); every other knob defaults in dwctl.
+
 # Fusillade Daemon Configuration
 # When enabled, deploys the fusillade daemon as a separate deployment from the control layer.
 # This sets background_services.batch_daemon.enabled to:
@@ -515,6 +519,63 @@ keystore:
     annotations: {}
     #  backup.velero.io/backup-volumes-excludes: keystore-data
 
+  resources: {}
+
+  # Redis official image runs as uid/gid 999.
+  podSecurityContext:
+    fsGroup: 999
+  securityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    runAsNonRoot: true
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: {}
+
+# Flex live-streaming chunk relay: relays real per-token deltas over Redis
+# Streams instead of poll-and-replay. Independent of the keystore Redis above
+# - chunk-relay traffic is much higher QPS, so a shared instance risks a
+# streaming burst affecting ZDR keystore latency. Off by default; when false,
+# flex streaming falls back to poll-and-replay as before.
+#
+#   1. chunkRelay.enabled: true (uses the internal Redis by default; configure
+#      chunkRelay.external to use an existing Redis service instead)
+chunkRelay:
+  # Enable the flex live-streaming relay. Deploys an internal Redis
+  # Deployment unless external.enabled is true.
+  enabled: false
+
+  # Use a separately managed Redis service instead of deploying the internal
+  # Redis Deployment and Service. Create this Secret before enabling external
+  # mode; its value must be a Redis connection URL supported by the
+  # application image (for example, redis:// or rediss://). Keep credentials
+  # in the Secret rather than passing the URL through values.
+  external:
+    enabled: false
+    existingSecret: ""
+    existingSecretKey: redis-url
+
+  # The following override dwctl's shipped defaults (see
+  # flex_live_streaming.chunk_relay in config.yaml); leave unset to use them.
+  # streamTtlSeconds: 600
+  # maxlen: 2000
+  # publishChannelCapacity: 1024
+  # readerPollIntervalMs: 75
+  # publishWorkers: 8
+  # readerWorkers: 8
+  # pollFallbackIntervalMs: 5000
+
+  image:
+    repository: redis
+    pullPolicy: IfNotPresent
+    tag: "7.4"
+
+  # No persistence: this is a correctness fallback (poll-and-replay covers
+  # any request whose relayed chunks are lost), not a source of truth. A
+  # restart just drops in-flight relayed chunks.
   resources: {}
 
   # Redis official image runs as uid/gid 999.

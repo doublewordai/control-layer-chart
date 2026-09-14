@@ -194,3 +194,82 @@ override it.
   value: {{ . | quote }}
 {{- end }}
 {{- end }}
+
+{{/*
+Common labels for chunk-relay (flex live-streaming Redis relay)
+*/}}
+{{- define "control-layer.chunkRelay.labels" -}}
+helm.sh/chart: {{ include "control-layer.chart" . }}
+{{ include "control-layer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+app.kubernetes.io/component: chunk-relay
+{{- end }}
+
+{{/*
+Selector labels for chunk-relay
+*/}}
+{{- define "control-layer.chunkRelay.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "control-layer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: chunk-relay
+{{- end }}
+
+{{/*
+Flex live-streaming chunk-relay env wiring, shared by the control-layer and
+fusillade Deployments so the two cannot drift. The fusillade daemon makes the
+actual upstream call and publishes chunks; the control-layer pods subscribe
+and relay them to clients - both need the same redis_url. Callers guard on
+.Values.chunkRelay.enabled and set indentation, e.g.:
+  {{- if .Values.chunkRelay.enabled }}
+  {{- include "control-layer.chunkRelayEnv" . | nindent 12 }}
+  {{- end }}
+redis_url targets the in-cluster chunk-relay Service by default. In external
+mode it is sourced from an existing Secret so credentials never pass through
+ordinary Helm values. Every other knob defaults in dwctl; set the matching
+chunkRelay.* value only to override.
+*/}}
+{{- define "control-layer.chunkRelayEnv" -}}
+{{- $external := .Values.chunkRelay.external | default dict -}}
+- name: DWCTL_FLEX_LIVE_STREAMING__ENABLED
+  value: "true"
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+{{- if $external.enabled }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ required "chunkRelay.external.existingSecret is required when external chunk relay is enabled" $external.existingSecret | quote }}
+      key: {{ required "chunkRelay.external.existingSecretKey is required when external chunk relay is enabled" $external.existingSecretKey | quote }}
+{{- else }}
+  value: "redis://{{ include "control-layer.fullname" . }}-chunk-relay:6379"
+{{- end }}
+{{- with .Values.chunkRelay.streamTtlSeconds }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__STREAM_TTL_SECS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.maxlen }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__MAXLEN
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.publishChannelCapacity }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__PUBLISH_CHANNEL_CAPACITY
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.readerPollIntervalMs }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__READER_POLL_INTERVAL_MS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.publishWorkers }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__PUBLISH_WORKERS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.readerWorkers }}
+- name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__READER_WORKERS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.chunkRelay.pollFallbackIntervalMs }}
+- name: DWCTL_FLEX_LIVE_STREAMING__POLL_FALLBACK_INTERVAL_MS
+  value: {{ . | quote }}
+{{- end }}
+{{- end }}

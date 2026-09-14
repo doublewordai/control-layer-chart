@@ -1,0 +1,75 @@
+{{- $external := .Values.chunkRelay.external | default dict -}}
+{{- if and .Values.chunkRelay.enabled (not ($external.enabled | default false)) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "control-layer.fullname" . }}-chunk-relay
+  labels:
+    {{- include "control-layer.chunkRelay.labels" . | nindent 4 }}
+spec:
+  # Single instance by design: a pub/sub relay, not a source of truth (see
+  # chunkRelay.resources comment in values.yaml). Do not scale this up.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "control-layer.chunkRelay.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.chunkRelay.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "control-layer.chunkRelay.labels" . | nindent 8 }}
+        {{- with .Values.chunkRelay.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
+      {{- with .Values.chunkRelay.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: chunk-relay
+          {{- with .Values.chunkRelay.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.chunkRelay.image.repository }}:{{ .Values.chunkRelay.image.tag }}"
+          imagePullPolicy: {{ .Values.chunkRelay.image.pullPolicy }}
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- with .Values.chunkRelay.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.chunkRelay.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.chunkRelay.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.chunkRelay.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

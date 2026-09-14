@@ -118,6 +118,9 @@ spec:
             {{- if .Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" . | nindent 12 }}
             {{- end }}
+            {{- if .Values.chunkRelay.enabled }}
+            {{- include "control-layer.chunkRelayEnv" . | nindent 12 }}
+            {{- end }}
             {{- with .Values.env }}
             {{- range $key, $value := . }}
             - name: {{ $key }}

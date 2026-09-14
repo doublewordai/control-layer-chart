@@ -1,0 +1,257 @@
+suite: test chunk relay (flex live-streaming Redis relay)
+templates:
+  - chunk-relay/deployment.yaml
+  - chunk-relay/service.yaml
+  - deployment.yaml
+  - fusillade/deployment.yaml
+  - secret.yaml
+  - configmap.yaml
+tests:
+  - it: should not create the deployment when chunk relay is disabled
+    template: chunk-relay/deployment.yaml
+    set:
+      chunkRelay.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create the service when chunk relay is disabled
+    template: chunk-relay/service.yaml
+    set:
+      chunkRelay.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create the internal deployment in external mode
+    template: chunk-relay/deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: external-chunk-relay
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should not create the internal service in external mode
+    template: chunk-relay/service.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: external-chunk-relay
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create the deployment with default configuration
+    template: chunk-relay/deployment.yaml
+    set:
+      chunkRelay.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-chunk-relay
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: chunk-relay
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "redis:7.4"
+
+  - it: should probe with redis-cli ping and expose the redis port
+    template: chunk-relay/deployment.yaml
+    set:
+      chunkRelay.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: 6379
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.exec.command
+          value: ["redis-cli", "ping"]
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe.exec.command
+          value: ["redis-cli", "ping"]
+
+  - it: should use custom image configuration when specified
+    template: chunk-relay/deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.image.repository: "custom-redis"
+      chunkRelay.image.tag: "7.2"
+      chunkRelay.image.pullPolicy: "Always"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: "custom-redis:7.2"
+      - equal:
+          path: spec.template.spec.containers[0].imagePullPolicy
+          value: "Always"
+
+  - it: should create the service on the redis port
+    template: chunk-relay/service.yaml
+    set:
+      chunkRelay.enabled: true
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-chunk-relay
+      - contains:
+          path: spec.ports
+          content:
+            port: 6379
+            targetPort: redis
+            protocol: TCP
+            name: redis
+
+  - it: should inject the chunk relay redis_url and enabled flag when enabled
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__ENABLED
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            value: "redis://RELEASE-NAME-control-layer-chunk-relay:6379"
+
+  - it: should inject an overridden tuning knob when set
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.readerPollIntervalMs: 10
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__READER_POLL_INTERVAL_MS
+            value: "10"
+
+  - it: should not inject a tuning knob env var when unset
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__READER_POLL_INTERVAL_MS
+
+  - it: should inject the external redis_url from a secret
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: external-chunk-relay
+      chunkRelay.external.existingSecretKey: connection-url
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: external-chunk-relay
+                key: connection-url
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            value: "redis://RELEASE-NAME-control-layer-chunk-relay:6379"
+
+  - it: should require an external redis secret name
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "chunkRelay.external.existingSecret is required when external chunk relay is enabled"
+
+  - it: should require an external redis secret key
+    template: deployment.yaml
+    set:
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: external-chunk-relay
+      chunkRelay.external.existingSecretKey: ""
+    asserts:
+      - failedTemplate:
+          errorPattern: "chunkRelay.external.existingSecretKey is required when external chunk relay is enabled"
+
+  # The fusillade daemon makes the actual upstream call and publishes chunks;
+  # the control-layer pods subscribe and relay them to clients. Both need the
+  # same redis_url, or one side crash-loops / silently never relays anything -
+  # mirrors the keystore regression this chart already guards against.
+  - it: should inject the chunk relay env into the fusillade daemon when enabled
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      chunkRelay.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__ENABLED
+            value: "true"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            value: "redis://RELEASE-NAME-control-layer-chunk-relay:6379"
+
+  - it: should inject the external redis_url into both split fusillade daemons
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      chunkRelay.enabled: true
+      chunkRelay.external.enabled: true
+      chunkRelay.external.existingSecret: external-chunk-relay
+      chunkRelay.external.existingSecretKey: connection-url
+    asserts:
+      - hasDocuments:
+          count: 2
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: external-chunk-relay
+                key: connection-url
+        documentIndex: 0
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: external-chunk-relay
+                key: connection-url
+        documentIndex: 1
+
+  - it: should not inject chunk relay env into the fusillade daemon when disabled
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      chunkRelay.enabled: false
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_FLEX_LIVE_STREAMING__CHUNK_RELAY__REDIS_URL
+            value: "redis://RELEASE-NAME-control-layer-chunk-relay:6379"
