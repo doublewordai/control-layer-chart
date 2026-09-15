@@ -38,7 +38,7 @@ jobs:
           version: "3.13.0"
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Determine version
         id: version
