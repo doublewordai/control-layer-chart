@@ -92,17 +92,24 @@ spec:
             {{- if $root.Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
-            {{- range $key, $value := $root.Values.env }}
+            {{- range $key, $value := omit $root.Values.env "DWCTL_MIGRATIONS__MODE" }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := $fusillade.env }}
+            {{- range $key, $value := omit $fusillade.env "DWCTL_MIGRATIONS__MODE" }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := (get $config "env" | default dict) }}
+            {{- range $key, $value := omit (get $config "env" | default dict) "DWCTL_MIGRATIONS__MODE" }}
             - name: {{ $key }}
               value: {{ $value | quote }}
+            {{- end }}
+            {{- if $root.Values.migrations.job.enabled }}
+            # The migration Job owns DDL; pods only verify schema compatibility.
+            # Rendered after every env map and excluded from them so nothing
+            # can override it.
+            - name: DWCTL_MIGRATIONS__MODE
+              value: {{ $root.Values.migrations.startupMode | quote }}
             {{- end }}
             # Enable fusillade daemon on these pods
             - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED

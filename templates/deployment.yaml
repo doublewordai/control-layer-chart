@@ -118,11 +118,15 @@ spec:
             {{- if .Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" . | nindent 12 }}
             {{- end }}
-            {{- with .Values.env }}
-            {{- range $key, $value := . }}
+            {{- range $key, $value := omit .Values.env "DWCTL_MIGRATIONS__MODE" }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if .Values.migrations.job.enabled }}
+            # The migration Job owns DDL; pods only verify schema compatibility.
+            # Rendered last and excluded from `env` so nothing can override it.
+            - name: DWCTL_MIGRATIONS__MODE
+              value: {{ .Values.migrations.startupMode | quote }}
             {{- end }}
           {{- with .Values.livenessProbe }}
           livenessProbe:

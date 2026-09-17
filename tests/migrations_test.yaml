@@ -1,0 +1,388 @@
+suite: test schema migration job
+templates:
+  - migrations/job.yaml
+  - migrations/config.yaml
+  - migrations/secret.yaml
+  - deployment.yaml
+  - fusillade/deployment.yaml
+  - configmap.yaml
+  - secret.yaml
+tests:
+  - it: renders nothing when the job is disabled
+    templates:
+      - migrations/job.yaml
+      - migrations/config.yaml
+      - migrations/secret.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: leaves application pods on in-process migrations when the job is disabled
+    template: deployment.yaml
+    set:
+      env.RUST_LOG: info
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+          any: true
+
+  - it: refuses to run against the in-chart postgres, which does not exist in the hook phase
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: true
+    asserts:
+      - failedTemplate:
+          errorPattern: migrations.job requires an external database
+
+  - it: runs dwctl migrate with the exact application image as a PreSync and pre-upgrade hook
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      image.tag: "11.15.0@sha256:0123456789abcdef"
+    asserts:
+      - isKind:
+          of: Job
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-migrate
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/doublewordai/control-layer:11.15.0@sha256:0123456789abcdef
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["migrate"]
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+          value: PreSync
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/hook-delete-policy"]
+          value: BeforeHookCreation
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-5"
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: pre-install,pre-upgrade
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
+      - equal:
+          path: spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.backoffLimit
+          value: 2
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 3600
+      - isNull:
+          path: spec.ttlSecondsAfterFinished
+      - equal:
+          path: metadata.labels["app.kubernetes.io/component"]
+          value: migrations
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 1Gi
+
+  - it: keeps one stably named job per release so nothing accumulates across images
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      image.tag: "11.16.0@sha256:fedcba9876543210"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-migrate
+      - equal:
+          path: spec.template.spec.volumes[0].configMap.name
+          value: RELEASE-NAME-control-layer-migrate-config
+
+  - it: does not depend on the chart service account, which does not exist in the hook phase
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+    asserts:
+      - isNull:
+          path: spec.template.spec.serviceAccountName
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
+
+  - it: uses an explicitly named service account when given
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      migrations.job.serviceAccountName: migrate-sa
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: migrate-sa
+
+  - it: mounts a hook-phase copy of the config rather than the sync-phase configmap
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+    asserts:
+      - template: migrations/job.yaml
+        contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: config
+            mountPath: /app/config.yaml
+            subPath: control-layer-config.yaml
+            readOnly: true
+      - template: migrations/config.yaml
+        isKind:
+          of: ConfigMap
+      - template: migrations/config.yaml
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-migrate-config
+      - template: migrations/config.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+          value: PreSync
+      - template: migrations/config.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-10"
+      - template: migrations/config.yaml
+        equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "-5"
+      - template: migrations/config.yaml
+        matchRegex:
+          path: data["control-layer-config.yaml"]
+          pattern: "port: 3001"
+
+  - it: always loads the primary secret first, optionally, then extras
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      secrets.controlLayer.existingSecret: preview-runtime
+      secrets.controlLayer.extraExistingSecrets:
+        - staging-runtime
+    asserts:
+      - template: migrations/job.yaml
+        equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: preview-runtime
+                optional: true
+            - secretRef:
+                name: staging-runtime
+      - template: migrations/secret.yaml
+        hasDocuments:
+          count: 0
+
+  - it: keeps an external primary secret when hook credentials override some keys
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      secrets.controlLayer.existingSecret: preview-runtime
+      migrations.job.secretData.DATABASE_URL: "postgres://rotated:pw@ep-new.neon.tech/clay"
+    asserts:
+      - template: migrations/job.yaml
+        equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: preview-runtime
+                optional: true
+            - secretRef:
+                name: RELEASE-NAME-control-layer-migrate-secret
+      - template: migrations/secret.yaml
+        equal:
+          path: data.DATABASE_URL
+          value: cG9zdGdyZXM6Ly9yb3RhdGVkOnB3QGVwLW5ldy5uZW9uLnRlY2gvY2xheQ==
+
+  - it: copies the chart credentials into a hook-phase secret so PreSync never reads a stale one
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      secrets.controlLayer.data.DATABASE_URL: "postgres://app:pw@db/clay"
+      secrets.controlLayer.data.SYSTEM_API_KEY: "sk-system"
+      secrets.controlLayer.data.UNSET: ""
+    asserts:
+      - template: migrations/secret.yaml
+        equal:
+          path: data.DATABASE_URL
+          value: cG9zdGdyZXM6Ly9hcHA6cHdAZGIvY2xheQ==
+      - template: migrations/secret.yaml
+        equal:
+          path: data.SYSTEM_API_KEY
+          value: c2stc3lzdGVt
+      - template: migrations/secret.yaml
+        isNull:
+          path: data.UNSET
+      - template: migrations/job.yaml
+        equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: RELEASE-NAME-control-layer-secret
+                optional: true
+            - secretRef:
+                name: RELEASE-NAME-control-layer-migrate-secret
+
+  - it: renders rotated credentials into a hook-phase secret that wins over stale sources
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      migrations.job.secretData.DATABASE_URL: "postgres://rotated:pw@ep-new.neon.tech/clay"
+      migrations.job.secretData.EMPTY: ""
+      secrets.controlLayer.extraExistingSecrets:
+        - staging-runtime
+      migrations.job.extraExistingSecrets:
+        - migrate-extra
+    asserts:
+      - template: migrations/secret.yaml
+        isKind:
+          of: Secret
+      - template: migrations/secret.yaml
+        equal:
+          path: metadata.name
+          value: RELEASE-NAME-control-layer-migrate-secret
+      - template: migrations/secret.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+          value: PreSync
+      - template: migrations/secret.yaml
+        equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-10"
+      - template: migrations/secret.yaml
+        isNull:
+          path: data.EMPTY
+      # The hook Secret is last so its rotated DATABASE_URL wins over the
+      # not-yet-updated staging-runtime Secret.
+      - template: migrations/job.yaml
+        equal:
+          path: spec.template.spec.containers[0].envFrom
+          value:
+            - secretRef:
+                name: RELEASE-NAME-control-layer-secret
+                optional: true
+            - secretRef:
+                name: staging-runtime
+            - secretRef:
+                name: migrate-extra
+            - secretRef:
+                name: RELEASE-NAME-control-layer-migrate-secret
+
+  - it: switches application and fusillade pods to compatibility checks
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      fusillade.enabled: true
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: check
+      - template: fusillade/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: check
+
+  - it: cannot have the startup mode overridden through env maps
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      fusillade.enabled: true
+      env.DWCTL_MIGRATIONS__MODE: run
+      env.ZZZ_LAST: "1"
+      fusillade.env.DWCTL_MIGRATIONS__MODE: run
+    asserts:
+      - template: deployment.yaml
+        notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: run
+      - template: deployment.yaml
+        equal:
+          path: spec.template.spec.containers[0].env[-1]
+          value:
+            name: DWCTL_MIGRATIONS__MODE
+            value: check
+      - template: fusillade/deployment.yaml
+        notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: run
+      - template: fusillade/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: check
+
+  - it: allows keeping in-process migrations during the first transition
+    template: deployment.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      migrations.startupMode: run
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: run
+
+  - it: can drop either hook system and merges job env over shared env
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      migrations.job.argocd.enabled: false
+      migrations.job.ttlSecondsAfterFinished: 600
+      env.RUST_LOG: info
+      migrations.job.env.RUST_LOG: debug
+    asserts:
+      - isNull:
+          path: metadata.annotations["argocd.argoproj.io/hook"]
+      - equal:
+          path: metadata.annotations["helm.sh/hook"]
+          value: pre-install,pre-upgrade
+      - equal:
+          path: spec.ttlSecondsAfterFinished
+          value: 600
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: debug
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RUST_LOG
+            value: info
+
+  - it: keeps the job pod out of the application selectors
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+    asserts:
+      - template: migrations/job.yaml
+        equal:
+          path: spec.template.metadata.labels["app.kubernetes.io/component"]
+          value: migrations
+      - template: deployment.yaml
+        equal:
+          path: spec.selector.matchLabels["app.kubernetes.io/component"]
+          value: control-layer

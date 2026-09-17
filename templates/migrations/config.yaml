@@ -1,0 +1,21 @@
+{{- /*
+  Hook-phase copy of the application config for the migration Job.
+
+  The Job runs in PreSync, before the chart's ordinary ConfigMap is created or
+  updated, so it must carry its own copy of `config` from the same values.
+  Replaced on every sync (BeforeHookCreation) and kept afterwards so a failed
+  Job can still be diagnosed.
+*/ -}}
+{{- if .Values.migrations.job.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-layer.migrations.configMapName" . }}
+  labels:
+    {{- include "control-layer.migrations.labels" . | nindent 4 }}
+  annotations:
+    {{- include "control-layer.migrations.hookAnnotations" (dict "root" . "weight" "-5" "wave" .Values.migrations.job.prerequisiteSyncWave) | nindent 4 }}
+data:
+  control-layer-config.yaml: |
+    {{- .Values.config | nindent 4 }}
+{{- end }}
