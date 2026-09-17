@@ -125,10 +125,16 @@ serviceMonitor:
 # The Job is an Argo CD PreSync hook and a Helm pre-install/pre-upgrade hook;
 # both wait for it and block the rollout when it fails, leaving the previous
 # ReplicaSets untouched. Requires an image with the `migrate` subcommand
-# (control-layer >= 11.15).
+# (control-layer >= 11.15) and an external database: the hook runs before
+# any Sync-phase resource, so it cannot wait for the in-chart PostgreSQL
+# (the chart refuses `migrations.job.enabled` with `postgresql.enabled`).
 migrations:
   job:
     enabled: false
+    # ServiceAccount for the Job's pod. Empty uses the namespace default,
+    # which exists before the chart's own ServiceAccount is created; the Job
+    # needs no Kubernetes API access either way.
+    serviceAccountName: ""
     # Argo CD sync waves within the PreSync phase. The Job's config/secret
     # copies use `prerequisiteSyncWave` so they exist before the Job's pod.
     # Environments that stamp a release-wide sync-wave transformer override
@@ -145,8 +151,10 @@ migrations:
     # builds on large tables can take a long time; a Job that hits this
     # deadline fails the sync and the next sync resumes where it left off.
     activeDeadlineSeconds: 3600
-    # Leave unset to keep finished Jobs (and their logs) until the next sync
-    # replaces them. Set a number of seconds to garbage-collect them earlier.
+    # Leave unset to keep the finished Job (and its logs) until the next sync
+    # replaces it; names are stable, so only one Job exists at a time. Set a
+    # number of seconds to garbage-collect it earlier (this also removes the
+    # logs of a failed Job after that delay).
     ttlSecondsAfterFinished: null
     resources:
       requests:
@@ -158,11 +166,13 @@ migrations:
     env: {}
     # Extra Secrets loaded via envFrom after the primary one.
     extraExistingSecrets: []
-    # Credentials rendered into a hook-phase Secret for the Job. Set this when
-    # the application's Secret is updated in the same sync (rotated
+    # Credentials rendered into a hook-phase Secret for the Job, loaded after
+    # the application's primary Secret so they override it key by key. Set
+    # this when the application's Secret is updated in the same sync (rotated
     # DATABASE_URL after a database refresh): a PreSync hook runs before
     # ordinary Secrets are updated and would otherwise use the previous
-    # credentials. When empty, the Job reads the chart's application Secret.
+    # credentials. The chart's own `secrets.controlLayer.data` is copied in
+    # automatically.
     secretData: {}
     annotations: {}
     podAnnotations: {}

@@ -192,6 +192,12 @@ and startup probes, and a migration that fails part-way keeps every new pod
 from starting. Enable the migration Job instead:
 
 ```yaml
+image:
+  tag: "11.15.0"          # any control-layer >= 11.15 (has `dwctl migrate`)
+secrets:
+  controlLayer:
+    data:
+      DATABASE_URL: postgres://...   # an external database is required
 migrations:
   job:
     enabled: true
@@ -206,14 +212,19 @@ abort the rollout when it fails, leaving the previous ReplicaSets serving. The
 Job repairs interrupted `CONCURRENTLY` index builds before applying migrations
 and verifies them afterwards; every run is safe to repeat.
 
-Application and Fusillade pods get `DWCTL_MIGRATIONS__MODE=check`: they never
-execute DDL and refuse to start on a database that is behind their release,
-while accepting one that is ahead, so old replicas keep serving during an
-additive migration.
+By default, Application and Fusillade pods get `DWCTL_MIGRATIONS__MODE=check`:
+they never execute DDL and refuse to start on a database that is behind their
+release, while accepting one that is ahead, so old replicas keep serving during
+an additive migration. `migrations.startupMode: run` keeps in-process
+migrations on the pods alongside the Job, for a deliberate transition only; the
+key cannot be set through `env`.
 
-When credentials are updated in the same sync as the image (a rotated
-`DATABASE_URL` after a database refresh), pass them to the Job explicitly so
-it does not read the previous values from a not-yet-updated Secret:
+The Job loads the application's primary Secret (chart-owned or
+`existingSecret`) and `extraExistingSecrets` first, then its own hook-phase
+Secret last so its keys win. When credentials are updated in the same sync as
+the image (a rotated `DATABASE_URL` after a database refresh), pass them to the
+Job explicitly so it does not read the previous values from a not-yet-updated
+Secret:
 
 ```yaml
 migrations:
@@ -225,8 +236,11 @@ migrations:
 
 Requires an image with the `migrate` subcommand (control-layer ≥ 11.15).
 `migrations.job.activeDeadlineSeconds`, `backoffLimit`, `resources` and
-`ttlSecondsAfterFinished` bound the Job; finished Jobs are kept until the next
-sync replaces them so a failure can be diagnosed from its logs.
+`ttlSecondsAfterFinished` bound the Job. Names are stable, so one Job exists at
+a time; it is kept until the next sync replaces it when `ttlSecondsAfterFinished`
+is unset, so a failure can be diagnosed from its logs. The Job cannot be used
+with the in-chart PostgreSQL (`postgresql.enabled`), because the hook runs
+before that StatefulSet exists.
 
 ### Fusillade Daemon Configuration
 

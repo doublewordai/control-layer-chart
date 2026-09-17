@@ -196,23 +196,22 @@ override it.
 {{- end }}
 
 {{/*
-Migration Job: a short stable hash of the image reference, so each release
-gets its own Job/ConfigMap/Secret names (and hook replacement is per release).
+Migration resource names. Stable (no per-image suffix) on purpose: both hook
+systems replace a same-named hook before creating it (BeforeHookCreation /
+before-hook-creation), so exactly one Job, ConfigMap and Secret exist at any
+time, a failed Job stays until the next sync replaces it, and nothing
+accumulates across releases. The image reference lives in the Job's pod spec.
 */}}
-{{- define "control-layer.migrations.imageHash" -}}
-{{- printf "%s:%s" .Values.image.repository (.Values.image.tag | default .Chart.AppVersion) | sha256sum | trunc 8 -}}
-{{- end }}
-
 {{- define "control-layer.migrations.jobName" -}}
-{{- printf "%s-migrate-%s" (include "control-layer.fullname" . | trunc 46 | trimSuffix "-") (include "control-layer.migrations.imageHash" .) -}}
+{{- printf "%s-migrate" (include "control-layer.fullname" . | trunc 55 | trimSuffix "-") -}}
 {{- end }}
 
 {{- define "control-layer.migrations.configMapName" -}}
-{{- printf "%s-migrate-config-%s" (include "control-layer.fullname" . | trunc 39 | trimSuffix "-") (include "control-layer.migrations.imageHash" .) -}}
+{{- printf "%s-migrate-config" (include "control-layer.fullname" . | trunc 48 | trimSuffix "-") -}}
 {{- end }}
 
 {{- define "control-layer.migrations.secretName" -}}
-{{- printf "%s-migrate-secret-%s" (include "control-layer.fullname" . | trunc 39 | trimSuffix "-") (include "control-layer.migrations.imageHash" .) -}}
+{{- printf "%s-migrate-secret" (include "control-layer.fullname" . | trunc 48 | trimSuffix "-") -}}
 {{- end }}
 
 {{/*
@@ -267,10 +266,11 @@ their own set: Argo runs PreSync hooks before the Sync phase and fails the
 sync when the Job fails; Helm runs pre-install/pre-upgrade hooks before the
 release manifests and aborts the upgrade when the Job fails.
 
-BeforeHookCreation (and nothing else): the resources are replaced by the next
-sync and otherwise kept, so a failed Job, its pod and its logs stay available
-for diagnosis. Argo serialises operations per Application, so this never
-deletes a Job that is still running.
+BeforeHookCreation (and nothing else): the same-named resources are replaced
+by the next sync and otherwise kept, so a failed Job, its pod and its logs
+stay available for diagnosis (unless `ttlSecondsAfterFinished` collects them
+first). Argo serialises operations per Application, so this never deletes a
+Job that is still running.
 
 Takes a dict: root (the chart context), weight (Helm hook weight), wave
 (Argo sync wave). Config/Secret use a lower weight/wave than the Job so they

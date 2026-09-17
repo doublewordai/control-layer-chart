@@ -22,13 +22,21 @@
   first install, before they exist), so a Job that mounted them would migrate
   the wrong database with the previous credentials.
 
-  Naming: the image reference is hashed into the Job name, so every release
-  is a distinct Job and a re-sync of the same release replaces its own Job
-  (hook-delete-policy BeforeHookCreation). Argo CD serialises operations per
-  Application, so an in-progress Job is never replaced by an overlapping sync;
-  only an explicit "terminate" does that, and the next run recovers.
+  Naming is stable: each sync replaces the previous Job (hook-delete-policy
+  BeforeHookCreation), so nothing accumulates across releases. Argo CD
+  serialises operations per Application, so an in-progress Job is never
+  replaced by an overlapping sync; only an explicit "terminate" does that, and
+  the next run recovers.
+
+  The Job needs a reachable database before any Sync-phase resource exists,
+  so it cannot be used with the in-chart PostgreSQL StatefulSet, and it runs
+  under the namespace's default ServiceAccount (it needs no Kubernetes API
+  access) unless one is named explicitly.
 */ -}}
 {{- if .Values.migrations.job.enabled }}
+{{- if .Values.postgresql.enabled }}
+{{- fail "migrations.job requires an external database: a PreSync hook runs before the in-chart PostgreSQL StatefulSet exists. Set postgresql.enabled=false and provide DATABASE_URL, or disable migrations.job" }}
+{{- end }}
 {{- $name := include "control-layer.migrations.jobName" . }}
 apiVersion: batch/v1
 kind: Job
@@ -66,7 +74,10 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "control-layer.serviceAccountName" . }}
+      {{- with .Values.migrations.job.serviceAccountName }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      automountServiceAccountToken: false
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -83,14 +94,15 @@ spec:
             - migrate
           {{- /*
             Kubernetes resolves duplicate envFrom keys from the LAST source, so
-            the hook-phase Secret comes last: its values must win over any
-            Sync-phase Secret that has not been updated yet at PreSync time.
+            the order is: the application's primary Secret (optional: on a first
+            install the chart-owned one does not exist yet in the hook phase),
+            then the extra Secrets, then the hook-phase Secret, whose values
+            must win over anything not yet updated at PreSync time.
           */}}
           envFrom:
-            {{- if not (include "control-layer.migrations.hasSecretData" .) }}
             - secretRef:
                 name: {{ include "control-layer.secretName" . }}
-            {{- end }}
+                optional: true
             {{- range .Values.secrets.controlLayer.extraExistingSecrets }}
             - secretRef:
                 name: {{ . | quote }}
