@@ -223,7 +223,7 @@ migrations:
       DATABASE_URL: postgres://...   # rendered into the Job's hook-phase Secret
 ```
 
-Requires an image with the `migrate` subcommand (control-layer ≥ 11.11).
+Requires an image with the `migrate` subcommand (control-layer ≥ 11.15).
 `migrations.job.activeDeadlineSeconds`, `backoffLimit`, `resources` and
 `ttlSecondsAfterFinished` bound the Job; finished Jobs are kept until the next
 sync replaces them so a failure can be diagnosed from its logs.

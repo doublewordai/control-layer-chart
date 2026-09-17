@@ -125,7 +125,7 @@ serviceMonitor:
 # The Job is an Argo CD PreSync hook and a Helm pre-install/pre-upgrade hook;
 # both wait for it and block the rollout when it fails, leaving the previous
 # ReplicaSets untouched. Requires an image with the `migrate` subcommand
-# (control-layer >= 11.11).
+# (control-layer >= 11.15).
 migrations:
   job:
     enabled: false
