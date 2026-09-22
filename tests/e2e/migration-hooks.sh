@@ -26,6 +26,7 @@ REL="cl"
 DB_URL="postgres://clay:clay@pg.$NS.svc:5432/clay"
 
 log() { printf '\n== %s\n' "$*"; }
+plain() { sed 's/\x1b\[[0-9;]*m//g'; }  # dwctl logs are coloured
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
 log "namespace and a stand-in external Postgres"
@@ -95,12 +96,12 @@ job_done=$(kubectl -n "$NS" get job "$REL-control-layer-migrate" -o jsonpath='{.
 pod_start=$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=control-layer -o jsonpath='{.items[0].metadata.creationTimestamp}')
 [[ "$job_done" < "$pod_start" || "$job_done" == "$pod_start" ]] || fail "application pod ($pod_start) created before the Job finished ($job_done)"
 echo "  Job completed $job_done; first app pod created $pod_start"
-joblog=$(kubectl -n "$NS" logs "job/$REL-control-layer-migrate")
+joblog=$(kubectl -n "$NS" logs "job/$REL-control-layer-migrate" | plain)
 grep -q "dwctl migrate: all targets complete" <<<"$joblog" || fail "Job log lacks completion line"
 for target in main fusillade; do
   grep -q "migration target complete.*target=\"$target\"" <<<"$joblog" || fail "Job did not report target $target complete"
 done
-grep -q 'target="underway".*migrations applied' <<<"$joblog" || fail "Job did not apply underway migrations"
+grep -q 'migrations applied target="underway"' <<<"$joblog" || fail "Job did not apply underway migrations"
 schemas=$(kubectl -n "$NS" exec deploy/pg -- psql -U clay -d clay -Atc \
   "select string_agg(n, ',' order by n) from (select nspname n from pg_namespace where nspname in ('public','fusillade','underway')) s")
 [ "$schemas" = "fusillade,public,underway" ] || fail "expected schemas public, fusillade, underway; got: $schemas"
@@ -108,7 +109,10 @@ counts=$(kubectl -n "$NS" exec deploy/pg -- psql -U clay -d clay -Atc \
   "select (select count(*) from public._sqlx_migrations)||'/'||(select count(*) from fusillade._sqlx_migrations)||'/'||(select count(*) from underway._sqlx_migrations)")
 echo "  migrations recorded (main/fusillade/underway): $counts"
 kubectl -n "$NS" get deploy "$REL-control-layer" -o jsonpath='{.spec.template.spec.containers[0].env}' | grep -q '"name":"DWCTL_MIGRATIONS__MODE","value":"check"' || fail "pods not in check mode"
-kubectl -n "$NS" logs deploy/"$REL-control-layer" | grep -q "schema compatible" || fail "pod did not log a compatibility check"
+podlog=$(kubectl -n "$NS" logs deploy/"$REL-control-layer" | plain)
+for target in main fusillade underway; do
+  grep -q "schema compatible target=\"$target\"" <<<"$podlog" || fail "pod did not verify target $target"
+done
 echo "  PASS install ordering, check mode, compatibility check"
 old_pod=$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=control-layer -o jsonpath='{.items[0].metadata.name}')
 
@@ -119,7 +123,7 @@ fi
 kubectl -n "$NS" get job "$REL-control-layer-migrate" -o jsonpath='{.status.failed}' | grep -q 1 || fail "Job did not record a failure"
 kubectl -n "$NS" get pod "$old_pod" -o jsonpath='{.status.phase}' | grep -q Running || fail "old pod is not running after the failed upgrade"
 [ "$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=control-layer -o name | wc -l)" = 1 ] || fail "extra application pods appeared during the failed upgrade"
-kubectl -n "$NS" logs "job/$REL-control-layer-migrate" | grep -q "dwctl migrate failed" || fail "failed Job log lacks the failure line"
+kubectl -n "$NS" logs "job/$REL-control-layer-migrate" | plain | grep -q "dwctl migrate failed" || fail "failed Job log lacks the failure line"
 echo "  PASS failed Job blocked the rollout; old pod still serving; failure diagnosable from the Job's logs"
 
 log "3. repair: a correct upgrade reruns the Job and rolls the pods"
