@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/doublewordai/control-layer-chart/compare/v1.7.0...v1.8.0) (2026-09-22)
+
+
+### Features
+
+* run schema migrations from a pre-rollout Job ([#100](https://github.com/doublewordai/control-layer-chart/issues/100)) ([45ba5da](https://github.com/doublewordai/control-layer-chart/commit/45ba5da82597d58516994fb419a57b36ac7e9dda))
+
 ## [1.7.0](https://github.com/doublewordai/control-layer-chart/compare/v1.6.0...v1.7.0) (2026-09-11)
 
 
