@@ -194,10 +194,12 @@ from starting. Enable the migration Job instead:
 ```yaml
 image:
   tag: "11.15.0"          # any control-layer >= 11.15 (has `dwctl migrate`)
+postgresql:
+  enabled: false           # the Job needs an external database
 secrets:
   controlLayer:
     data:
-      DATABASE_URL: postgres://...   # an external database is required
+      DATABASE_URL: postgres://...
 migrations:
   job:
     enabled: true

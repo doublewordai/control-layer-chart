@@ -118,7 +118,10 @@ spec:
             {{- if .Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" . | nindent 12 }}
             {{- end }}
-            {{- range $key, $value := omit .Values.env "DWCTL_MIGRATIONS__MODE" }}
+            {{- /* The startup mode is reserved only while the Job owns migrations. */}}
+            {{- $env := .Values.env }}
+            {{- if .Values.migrations.job.enabled }}{{ $env = omit $env "DWCTL_MIGRATIONS__MODE" }}{{ end }}
+            {{- range $key, $value := $env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}

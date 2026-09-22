@@ -92,17 +92,14 @@ spec:
             {{- if $root.Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
-            {{- range $key, $value := omit $root.Values.env "DWCTL_MIGRATIONS__MODE" }}
+            {{- /* The startup mode is reserved only while the Job owns migrations. */}}
+            {{- $jobOwned := $root.Values.migrations.job.enabled }}
+            {{- range $envMap := list $root.Values.env $fusillade.env (get $config "env" | default dict) }}
+            {{- if $jobOwned }}{{ $envMap = omit $envMap "DWCTL_MIGRATIONS__MODE" }}{{ end }}
+            {{- range $key, $value := $envMap }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := omit $fusillade.env "DWCTL_MIGRATIONS__MODE" }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-            {{- range $key, $value := omit (get $config "env" | default dict) "DWCTL_MIGRATIONS__MODE" }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
             {{- end }}
             {{- if $root.Values.migrations.job.enabled }}
             # The migration Job owns DDL; pods only verify schema compatibility.

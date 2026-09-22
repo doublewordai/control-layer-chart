@@ -28,6 +28,36 @@ tests:
             name: DWCTL_MIGRATIONS__MODE
           any: true
 
+  - it: leaves a user-supplied startup mode alone when the job is disabled
+    set:
+      fusillade.enabled: true
+      env.DWCTL_MIGRATIONS__MODE: run
+      fusillade.env.DWCTL_MIGRATIONS__MODE: run
+    asserts:
+      - template: deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: run
+      - template: fusillade/deployment.yaml
+        contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: run
+
+  - it: refuses a job with no hook system, which would be an immutable ordinary resource
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      migrations.job.argocd.enabled: false
+      migrations.job.helmHooks.enabled: false
+    asserts:
+      - failedTemplate:
+          errorPattern: needs at least one hook system
+
   - it: refuses to run against the in-chart postgres, which does not exist in the hook phase
     template: migrations/job.yaml
     set:

@@ -34,6 +34,9 @@
   access) unless one is named explicitly.
 */ -}}
 {{- if .Values.migrations.job.enabled }}
+{{- if not (or .Values.migrations.job.argocd.enabled .Values.migrations.job.helmHooks.enabled) }}
+{{- fail "migrations.job needs at least one hook system (migrations.job.argocd.enabled or migrations.job.helmHooks.enabled): without hooks the Job is an ordinary immutable resource that blocks the next upgrade" }}
+{{- end }}
 {{- if .Values.postgresql.enabled }}
 {{- fail "migrations.job requires an external database: a PreSync hook runs before the in-chart PostgreSQL StatefulSet exists. Set postgresql.enabled=false and provide DATABASE_URL, or disable migrations.job" }}
 {{- end }}
