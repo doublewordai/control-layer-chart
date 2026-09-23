@@ -403,6 +403,25 @@ tests:
             name: RUST_LOG
             value: info
 
+  - it: gives the job the keystore redis url the config requires
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      keystore.enabled: true
+      keystore.external.enabled: true
+      keystore.external.existingSecret: control-layer-keystore-redis
+      keystore.external.existingSecretKey: redis-url
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_KEYSTORE__REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: control-layer-keystore-redis
+                key: redis-url
+
   - it: keeps the job pod out of the application selectors
     set:
       migrations.job.enabled: true

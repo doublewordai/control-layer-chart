@@ -118,10 +118,19 @@ spec:
             - secretRef:
                 name: {{ include "control-layer.migrations.secretName" . }}
             {{- end }}
+          {{- /*
+            The Job loads the same config.yaml as the pods, so it needs the
+            same non-secret env the Deployments derive from values: the
+            keystore Redis URL (the `keystore:` section of the config fails to
+            load without it) plus `env` and `migrations.job.env`.
+          */}}
           {{- $env := merge (deepCopy .Values.migrations.job.env) .Values.env }}
-          {{- with $env }}
+          {{- if or .Values.keystore.enabled $env }}
           env:
-            {{- range $key, $value := . }}
+            {{- if .Values.keystore.enabled }}
+            {{- include "control-layer.keystoreEnv" . | nindent 12 }}
+            {{- end }}
+            {{- range $key, $value := $env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
