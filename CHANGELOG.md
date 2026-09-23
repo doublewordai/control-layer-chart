@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/doublewordai/control-layer-chart/compare/v1.8.0...v1.8.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* give the migration Job the keystore Redis URL its config requires ([#104](https://github.com/doublewordai/control-layer-chart/issues/104)) ([f1b6e81](https://github.com/doublewordai/control-layer-chart/commit/f1b6e813c716089e5e21277cc88aef2f3a2b7e97))
+
 ## [1.8.0](https://github.com/doublewordai/control-layer-chart/compare/v1.7.0...v1.8.0) (2026-09-22)
 
 
