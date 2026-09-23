@@ -209,6 +209,7 @@ tests:
                 optional: true
             - secretRef:
                 name: staging-runtime
+                optional: true
       - template: migrations/secret.yaml
         hasDocuments:
           count: 0
@@ -303,8 +304,10 @@ tests:
                 optional: true
             - secretRef:
                 name: staging-runtime
+                optional: true
             - secretRef:
                 name: migrate-extra
+                optional: true
             - secretRef:
                 name: RELEASE-NAME-control-layer-migrate-secret
 
@@ -421,6 +424,19 @@ tests:
               secretKeyRef:
                 name: control-layer-keystore-redis
                 key: redis-url
+
+  - it: gives the job the in-chart keystore url in the default keystore mode
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      keystore.enabled: true
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_KEYSTORE__REDIS_URL
+            value: redis://RELEASE-NAME-control-layer-keystore:6379
 
   - it: keeps the job pod out of the application selectors
     set:

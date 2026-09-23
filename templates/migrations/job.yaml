@@ -106,13 +106,20 @@ spec:
             - secretRef:
                 name: {{ include "control-layer.secretName" . }}
                 optional: true
+            {{- /*
+              Also optional: on a first install these Sync-phase Secrets do
+              not exist yet, and the hook-phase Secret below carries what the
+              Job needs. A missing key still fails loudly inside the Job.
+            */}}
             {{- range .Values.secrets.controlLayer.extraExistingSecrets }}
             - secretRef:
                 name: {{ . | quote }}
+                optional: true
             {{- end }}
             {{- range .Values.migrations.job.extraExistingSecrets }}
             - secretRef:
                 name: {{ . | quote }}
+                optional: true
             {{- end }}
             {{- if include "control-layer.migrations.hasSecretData" . }}
             - secretRef:
