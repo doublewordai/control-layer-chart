@@ -215,10 +215,14 @@ heapProfiling:
 **Overhead.** Sampling only starts when `_RJEM_MALLOC_CONF` includes
 `prof:true,prof_active:true` at process start; the chart injects
 `prof:true,prof_active:true,lg_prof_sample:<N>`. At the default `2^19`
-(512 KiB) mean sample interval the overhead is low and the canary is intended
-for short diagnostic windows rather than permanent operation. Measure the exact
-cost for your workload in a staging environment before leaving it on; the
-application PR is the source of truth for the precise numbers.
+(512 KiB) mean sample interval, CPU overhead scales with the bytes the pod
+allocates and depends on the workload: an allocation-only benchmark measured
+roughly 45–50% more CPU, and a service that spends little time in the
+allocator sees much less. Memory grows by a few MiB of sampling metadata plus
+roughly 33 MiB of symbolizer cache after the first dump. Size the canary's
+resources accordingly, measure it against its peers in staging, and keep it
+for diagnostic windows rather than permanent operation. See the control-layer
+`docs/memory-observability.md` for the measurements.
 
 **Enable / disable.** Set `heapProfiling.enabled: true` to render the
 Deployment and `false` (the default) to remove it on the next sync. The chart

@@ -114,7 +114,7 @@ serviceMonitor:
 # Heap profiling (diagnostic).
 #
 # Opt-in canary: renders ONE extra Deployment for the API role that samples the
-# Go heap with jemalloc profiling and serves the standard Go pprof heap
+# dwctl (Rust) heap with jemalloc profiling and serves the pprof heap
 # endpoint. Off by default. See the "Heap profiling (diagnostic)" section in
 # README.md for overhead, capture and security guidance.
 #

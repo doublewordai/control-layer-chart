@@ -6,8 +6,10 @@ labels (including app.kubernetes.io/component) are added by the shared pod
 template, so the API Service and by extension the existing ServiceMonitor keep
 routing traffic and scrapes to this pod.
 */ -}}
-{{- $podLabels := dict "control-layer.doubleword.ai/diagnostic" "heap-profile" -}}
+{{- $podLabels := dict -}}
 {{- range $k, $v := .Values.heapProfiling.podLabels }}{{ $_ := set $podLabels $k $v }}{{ end -}}
+{{- /* Set last: the selector depends on it, so podLabels cannot override it. */ -}}
+{{- $_ := set $podLabels "control-layer.doubleword.ai/diagnostic" "heap-profile" -}}
 {{- /*
 Pod annotations. Grafana k8s-monitoring (Alloy) feature-profiling discovers
 pprof targets via annotations, whose keys are

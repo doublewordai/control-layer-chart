@@ -329,3 +329,56 @@ tests:
       - equal:
           path: spec.ingress[0].ports[0].port
           value: http
+
+  - it: should keep one env entry per name when env and heapProfiling.env overlap
+    set:
+      heapProfiling.enabled: true
+      env._RJEM_MALLOC_CONF: "background_thread:true"
+      env.SHARED: "from-env"
+      heapProfiling.env.SHARED: "from-canary"
+    template: heap-profile-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SHARED
+            value: "from-canary"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SHARED
+            value: "from-env"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: _RJEM_MALLOC_CONF
+            value: "background_thread:true"
+
+  - it: should not let heapProfiling.env override the Job-owned migrations mode
+    set:
+      heapProfiling.enabled: true
+      migrations.job.enabled: true
+      heapProfiling.env.DWCTL_MIGRATIONS__MODE: run
+    template: heap-profile-deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: "check"
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DWCTL_MIGRATIONS__MODE
+            value: "run"
+
+  - it: should not let podLabels override the diagnostic selector label
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.podLabels:
+        control-layer.doubleword.ai/diagnostic: other
+    template: heap-profile-deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels["control-layer.doubleword.ai/diagnostic"]
+          value: heap-profile

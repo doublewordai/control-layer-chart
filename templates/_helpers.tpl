@@ -299,7 +299,7 @@ specs cannot drift. Call with a dict:
     extraPodLabels      additional pod labels, rendered after .Values.podLabels
     extraPodAnnotations additional pod annotations, rendered after .Values.podAnnotations
     extraPorts          list of {name, containerPort} ports appended after http
-    extraEnv            map of extra container env, rendered last
+    extraEnv            map of extra container env, merged over `env`
     resources           resource block; falls back to .Values.resources when empty
 Rendered output starts at "  template:" (two-space indent) so callers can
 include it verbatim as the last child of their Deployment spec. Omitting
@@ -398,8 +398,10 @@ options renders byte-for-byte the same template as before this helper existed.
             {{- if $root.Values.keystore.enabled }}
             {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
             {{- end }}
-            {{- /* The startup mode is reserved only while the Job owns migrations. */}}
-            {{- $env := $root.Values.env }}
+            {{- /* Canary-only overrides merge into `env` (one entry per name,
+            extraEnv wins). The startup mode is reserved only while the Job owns
+            migrations, including against extraEnv. */}}
+            {{- $env := mergeOverwrite (deepCopy ($root.Values.env | default dict)) ($opts.extraEnv | default dict) }}
             {{- if $root.Values.migrations.job.enabled }}{{ $env = omit $env "DWCTL_MIGRATIONS__MODE" }}{{ end }}
             {{- range $key, $value := $env }}
             - name: {{ $key }}
@@ -410,11 +412,6 @@ options renders byte-for-byte the same template as before this helper existed.
             # Rendered last and excluded from `env` so nothing can override it.
             - name: DWCTL_MIGRATIONS__MODE
               value: {{ $root.Values.migrations.startupMode | quote }}
-            {{- end }}
-            {{- /* Heap-profiling and canary-only overrides, merged last. */}}
-            {{- range $key, $value := $opts.extraEnv }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
             {{- end }}
           {{- with $root.Values.livenessProbe }}
           livenessProbe:
