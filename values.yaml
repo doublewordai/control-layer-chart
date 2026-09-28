@@ -111,6 +111,71 @@ serviceMonitor:
   scrapeTimeout: 10s
   labels: {}
 
+# Heap profiling (diagnostic).
+#
+# Opt-in canary: renders ONE extra Deployment for the API role that samples the
+# Go heap with jemalloc profiling and serves the standard Go pprof heap
+# endpoint. Off by default. See the "Heap profiling (diagnostic)" section in
+# README.md for overhead, capture and security guidance.
+#
+# The canary reuses the API pod spec (image, config volume, secrets/envFrom,
+# probes, securityContext, scheduling, rollout lifecycle) and carries the same
+# Service selector labels, so it receives normal API traffic and is scraped by
+# the existing ServiceMonitor. Its own Deployment selector additionally
+# includes control-layer.doubleword.ai/diagnostic=heap-profile, so it never
+# adopts the main API Deployment's pods (and vice versa). The pprof listener is
+# never added to a Service, Ingress or ServiceMonitor endpoint.
+heapProfiling:
+  # Render the <fullname>-heap-profile Deployment. Disabling removes it on the
+  # next sync.
+  enabled: false
+
+  # Replicas for the canary only; independent of replicaCount.
+  replicas: 1
+
+  # jemalloc lg_prof_sample: mean interval between heap samples is 2^N bytes.
+  # 19 = 512 KiB. Lower = finer detail and more overhead, higher = coarser and
+  # cheaper. Injected as lg_prof_sample in _RJEM_MALLOC_CONF.
+  lgProfSample: 19
+
+  # containerPort named "pprof". Never added to a Service, Ingress or
+  # ServiceMonitor. Alloy scrapes it by the port_name annotation below.
+  port: 6060
+
+  # Add Grafana k8s-monitoring (Alloy) feature-profiling annotations so the
+  # pprof endpoint is scraped. Keys are profiles.grafana.com/memory.scrape,
+  # .port_name, .path plus the OpenTelemetry service.name resource annotation.
+  # Set false for clusters without Alloy.
+  scrapeAnnotations: true
+
+  # Pyroscope service_name reported for the canary. Empty defaults to
+  # "<fullname>-api" so profiles are distinguishable from the main API pods.
+  serviceName: ""
+
+  # Extra labels/annotations for the canary pod only. The diagnostic label and
+  # the scrape annotations are added on top of these.
+  podLabels: {}
+  podAnnotations: {}
+
+  # Extra container env for the canary only, merged last (wins over the
+  # heap-profiling defaults). Keys use the application's env names.
+  env: {}
+
+  # Resource requests/limits for the canary. Empty inherits the top-level
+  # `resources` block so the canary has the same footprint as an API pod.
+  resources: {}
+
+  # Optional NetworkPolicy for clusters that enforce them. It selects the
+  # canary pod and (1) keeps the http port open so normal API traffic keeps
+  # flowing, and (2) restricts the pprof port to the peers in `from`. Requires
+  # a NetworkPolicy-capable CNI.
+  networkPolicy:
+    enabled: false
+    # Standard networking.k8s.io/v1 NetworkPolicyPeer list (namespaceSelector
+    # and/or podSelector). Empty denies the pprof port to every source
+    # (kubectl port-forward still works).
+    from: []
+
 # Schema migrations.
 #
 # By default every application pod applies pending migrations at startup

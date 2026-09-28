@@ -1,0 +1,73 @@
+{{- if .Values.heapProfiling.enabled }}
+{{- $fullname := include "control-layer.fullname" . -}}
+{{- /*
+Pod labels: the diagnostic label plus any profile-specific labels. The base
+labels (including app.kubernetes.io/component) are added by the shared pod
+template, so the API Service and by extension the existing ServiceMonitor keep
+routing traffic and scrapes to this pod.
+*/ -}}
+{{- $podLabels := dict "control-layer.doubleword.ai/diagnostic" "heap-profile" -}}
+{{- range $k, $v := .Values.heapProfiling.podLabels }}{{ $_ := set $podLabels $k $v }}{{ end -}}
+{{- /*
+Pod annotations. Grafana k8s-monitoring (Alloy) feature-profiling discovers
+pprof targets via annotations, whose keys are
+"<prefix>/<type>.<action>" (prefix defaults to profiles.grafana.com, action
+names default to scrape/port_name/path). The Pyroscope service_name is chosen
+from the first of resource.opentelemetry.io/service.name,
+app.kubernetes.io/instance, app.kubernetes.io/name, container name; we pin it
+with the OpenTelemetry resource annotation so the canary shows up as a distinct
+service rather than blending into the API instance.
+*/ -}}
+{{- $podAnnotations := dict -}}
+{{- if .Values.heapProfiling.scrapeAnnotations -}}
+{{- $_ := set $podAnnotations "profiles.grafana.com/memory.scrape" "true" -}}
+{{- $_ := set $podAnnotations "profiles.grafana.com/memory.port_name" "pprof" -}}
+{{- $_ := set $podAnnotations "profiles.grafana.com/memory.path" "/debug/pprof/heap" -}}
+{{- $_ := set $podAnnotations "resource.opentelemetry.io/service.name" (default (printf "%s-api" $fullname) .Values.heapProfiling.serviceName) -}}
+{{- end -}}
+{{- range $k, $v := .Values.heapProfiling.podAnnotations }}{{ $_ := set $podAnnotations $k $v }}{{ end -}}
+{{- /*
+jemalloc sampling only turns on when _RJEM_MALLOC_CONF is present at process
+start. DWCTL_HEAP_PROFILING__ENABLED starts the separate pprof listener; the
+bind address keeps it off the API Service (which only publishes the http port).
+heapProfiling.env is merged last so operators can override or extend this set.
+*/ -}}
+{{- $profEnv := dict
+      "_RJEM_MALLOC_CONF" (printf "prof:true,prof_active:true,lg_prof_sample:%v" .Values.heapProfiling.lgProfSample)
+      "DWCTL_HEAP_PROFILING__ENABLED" "true"
+      "DWCTL_HEAP_PROFILING__BIND_ADDRESS" (printf "0.0.0.0:%v" .Values.heapProfiling.port) -}}
+{{- range $k, $v := .Values.heapProfiling.env }}{{ $_ := set $profEnv $k $v }}{{ end -}}
+{{- $ports := list (dict "name" "pprof" "containerPort" (.Values.heapProfiling.port | int)) -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-heap-profile
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+    control-layer.doubleword.ai/diagnostic: heap-profile
+spec:
+  replicas: {{ .Values.heapProfiling.replicas }}
+  {{- if .Values.rollout.enabled }}
+  strategy:
+    {{- toYaml .Values.rollout.strategy | nindent 4 }}
+  minReadySeconds: {{ .Values.rollout.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "control-layer.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: control-layer
+      {{- /* The diagnostic label is part of the selector so this Deployment
+      never adopts the main API Deployment's pods. The main selector is not
+      changed (it is immutable); it cannot adopt these pods because they carry
+      this Deployment's controller ownerRef. */}}
+      control-layer.doubleword.ai/diagnostic: heap-profile
+{{ include "control-layer.api.podTemplate" (dict
+     "root" .
+     "options" (dict
+        "extraPodLabels" $podLabels
+        "extraPodAnnotations" $podAnnotations
+        "extraPorts" $ports
+        "extraEnv" $profEnv
+        "resources" .Values.heapProfiling.resources)) }}
+{{- end }}

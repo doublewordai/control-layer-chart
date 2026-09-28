@@ -290,3 +290,195 @@ helm.sh/hook-weight: {{ .weight | toString | quote }}
 helm.sh/hook-delete-policy: before-hook-creation
 {{- end }}
 {{- end }}
+{{/*
+API pod template (the Deployment `spec.template` block), shared by the main
+control-layer Deployment and the opt-in heap-profiling canary so the two pod
+specs cannot drift. Call with a dict:
+  root:    the chart context
+  options: (optional) dict of canary-only additions
+    extraPodLabels      additional pod labels, rendered after .Values.podLabels
+    extraPodAnnotations additional pod annotations, rendered after .Values.podAnnotations
+    extraPorts          list of {name, containerPort} ports appended after http
+    extraEnv            map of extra container env, rendered last
+    resources           resource block; falls back to .Values.resources when empty
+Rendered output starts at "  template:" (two-space indent) so callers can
+include it verbatim as the last child of their Deployment spec. Omitting
+options renders byte-for-byte the same template as before this helper existed.
+*/}}
+{{- define "control-layer.api.podTemplate" -}}
+{{- $root := .root -}}
+{{- $opts := .options | default dict -}}
+{{ "  " }}template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum }}
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        {{- if $root.Values.modelProvisioning.enabled }}
+        checksum/model-provisioning: {{ include (print $root.Template.BasePath "/model-provisioning-configmap.yaml") $root | sha256sum }}
+        {{- end }}
+        {{- with $root.Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $opts.extraPodAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "control-layer.labels" $root | nindent 8 }}
+        {{- with $root.Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with $opts.extraPodLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if $root.Values.rollout.enabled }}
+      terminationGracePeriodSeconds: {{ $root.Values.rollout.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "control-layer.serviceAccountName" $root }}
+      {{- with $root.Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: control-layer
+          {{- if $root.Values.rollout.enabled }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - sleep {{ $root.Values.rollout.endpointDrainDelaySeconds }}
+          {{- end }}
+          {{- with $root.Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag | default $root.Chart.AppVersion }}"
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $root.Values.service.port }}
+              protocol: TCP
+            {{- range $port := $opts.extraPorts }}
+            - name: {{ $port.name }}
+              containerPort: {{ $port.containerPort }}
+              protocol: TCP
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "control-layer.secretName" $root }}
+            {{- range $root.Values.secrets.controlLayer.extraExistingSecrets }}
+            - secretRef:
+                name: {{ . | quote }}
+            {{- end }}
+          env:
+            {{- if $root.Values.modelProvisioning.enabled }}
+            - name: DWCTL_MODEL_PROVISIONING__ENABLED
+              value: "true"
+            - name: DWCTL_MODEL_PROVISIONING__DIRECTORY
+              value: {{ $root.Values.modelProvisioning.mountPath | quote }}
+            {{- end }}
+            {{- if $root.Values.bootstrap.enabled }}
+            - name: DASHBOARD_BOOTSTRAP_JS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "control-layer.fullname" $root }}-bootstrap
+                  key: bootstrap.js
+            {{- end }}
+            {{- if $root.Values.fusillade.enabled }}
+            # Disable fusillade daemon on control-layer pods when running separately
+            - name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__ENABLED
+              value: "never"
+            {{- end }}
+            {{- if $root.Values.keystore.enabled }}
+            {{- include "control-layer.keystoreEnv" $root | nindent 12 }}
+            {{- end }}
+            {{- /* The startup mode is reserved only while the Job owns migrations. */}}
+            {{- $env := $root.Values.env }}
+            {{- if $root.Values.migrations.job.enabled }}{{ $env = omit $env "DWCTL_MIGRATIONS__MODE" }}{{ end }}
+            {{- range $key, $value := $env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- if $root.Values.migrations.job.enabled }}
+            # The migration Job owns DDL; pods only verify schema compatibility.
+            # Rendered last and excluded from `env` so nothing can override it.
+            - name: DWCTL_MIGRATIONS__MODE
+              value: {{ $root.Values.migrations.startupMode | quote }}
+            {{- end }}
+            {{- /* Heap-profiling and canary-only overrides, merged last. */}}
+            {{- range $key, $value := $opts.extraEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with $root.Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- $resources := $opts.resources | default $root.Values.resources }}
+          {{- with $resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: control-layer-config.yaml
+              readOnly: true
+            {{- if $root.Values.modelProvisioning.enabled }}
+            - name: model-provisioning
+              mountPath: {{ $root.Values.modelProvisioning.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if $root.Values.emailTemplates.enabled }}
+            - name: email-templates
+              mountPath: {{ $root.Values.emailTemplates.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- with $root.Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "control-layer.fullname" $root }}-config
+        {{- if $root.Values.modelProvisioning.enabled }}
+        - name: model-provisioning
+          configMap:
+            name: {{ include "control-layer.fullname" $root }}-model-provisioning
+        {{- end }}
+        {{- if $root.Values.emailTemplates.enabled }}
+        - name: email-templates
+          configMap:
+            name: {{ include "control-layer.fullname" $root }}-email-templates
+        {{- end }}
+        {{- with $root.Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $root.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $root.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- end }}

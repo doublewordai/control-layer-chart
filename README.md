@@ -184,6 +184,96 @@ The progress deadline must be greater than the termination grace, and the
 termination grace must be greater than the endpoint drain delay. The chart
 rejects enabled configurations that violate either requirement.
 
+### Heap profiling (diagnostic)
+
+The opt-in heap profiler renders one extra API Deployment
+(`<fullname>-heap-profile`) that samples the dwctl (Rust) heap with jemalloc and serves
+`GET /debug/pprof/heap` (gzipped pprof) on a dedicated port. The canary carries
+the API Service selector labels, so it receives normal API traffic (the point is
+to observe real load), but it is a separate Deployment with the
+`control-layer.doubleword.ai/diagnostic: heap-profile` label in its own
+selector, and it never touches the main Deployment's pods. The pprof listener is
+**never** added to a Service, Ingress or ServiceMonitor endpoint.
+
+```yaml
+heapProfiling:
+  enabled: true
+  replicas: 1
+  lgProfSample: 19        # mean sample interval 2^N bytes (19 = 512 KiB)
+  port: 6060              # containerPort named "pprof"; not in any Service
+  scrapeAnnotations: true # Alloy profiles.grafana.com/memory.* annotations
+  serviceName: ""         # Pyroscope service_name; default "<fullname>-api"
+  podLabels: {}
+  podAnnotations: {}
+  env: {}                 # extra env for this pod only, merged last
+  resources: {}           # defaults to the top-level `resources`
+  networkPolicy:
+    enabled: false
+    from: []              # NetworkPolicyPeer list for the pprof port
+```
+
+**Overhead.** Sampling only starts when `_RJEM_MALLOC_CONF` includes
+`prof:true,prof_active:true` at process start; the chart injects
+`prof:true,prof_active:true,lg_prof_sample:<N>`. At the default `2^19`
+(512 KiB) mean sample interval the overhead is low and the canary is intended
+for short diagnostic windows rather than permanent operation. Measure the exact
+cost for your workload in a staging environment before leaving it on; the
+application PR is the source of truth for the precise numbers.
+
+**Enable / disable.** Set `heapProfiling.enabled: true` to render the
+Deployment and `false` (the default) to remove it on the next sync. The chart
+also sets `DWCTL_HEAP_PROFILING__ENABLED=true` and
+`DWCTL_HEAP_PROFILING__BIND_ADDRESS=0.0.0.0:<port>` on the canary only.
+
+**Capture a profile.** No Service is exposed; reach the pod directly with a
+port-forward:
+
+```bash
+kubectl port-forward deploy/<fullname>-heap-profile 6060:6060
+# in another shell:
+curl -o heap.pb.gz localhost:6060/debug/pprof/heap
+# or the rendered profile in a browser:
+go tool pprof -http=:0 heap.pb.gz
+```
+
+**Security.** The listener is reachable in-cluster by pod IP only, and is never
+published through a Service or Ingress. If your cluster enforces
+NetworkPolicies, enable `heapProfiling.networkPolicy.enabled: true`; the chart
+renders a policy that selects the canary, keeps the API `http` port open and
+restricts the `pprof` port to `heapProfiling.networkPolicy.from` peers (with no
+peers listed the port is denied; `kubectl port-forward` still works). Without
+a policy, any in-cluster workload that can reach the pod IP can read the heap
+profile, so treat the port as sensitive and prefer the NetworkPolicy on shared
+clusters.
+
+**Grafana k8s-monitoring (Alloy).** The chart adds the annotation-driven pprof
+scrape keys used by the `feature-profiling` chart (verified against
+grafana/k8s-monitoring-helm `k8s-monitoring-3.7.1`,
+`charts/k8s-monitoring/charts/feature-profiling/templates/_pprof.tpl`):
+
+| Annotation | Value |
+|------------|-------|
+| `profiles.grafana.com/memory.scrape` | `"true"` |
+| `profiles.grafana.com/memory.port_name` | `pprof` |
+| `profiles.grafana.com/memory.path` | `/debug/pprof/heap` |
+| `resource.opentelemetry.io/service.name` | `heapProfiling.serviceName` (default `<fullname>-api`) |
+
+The annotation prefix and actions are configurable in the monitoring chart
+(`profiling.annotations.prefix`, `profiling.pprof.annotations.*`); if you
+override them, mirror the changes here. The canary keeps the API `http` port
+and Service selector labels, so the existing ServiceMonitor (port `http`, path
+`/metrics`) scrapes it as an ordinary API pod, including the always-on
+`/internal/metrics` Prometheus metrics.
+
+**HPA / PDB.** The chart does not render HorizontalPodAutoscaler or
+PodDisruptionBudget objects. If you add one externally that selects the shared
+API labels, remember it will also match the canary pod: an average-CPU HPA
+metric will include the canary's usage (sampling adds allocator CPU, so this can
+skew scaling decisions; size targets for it or keep the canary short-lived),
+and a PDB will count it toward
+`minAvailable`/`maxUnavailable`. The canary is not added to any chart-managed
+object beyond its own Deployment (and optional NetworkPolicy).
+
 ### Schema migrations as a pre-rollout Job
 
 By default every application pod applies pending schema migrations when it
