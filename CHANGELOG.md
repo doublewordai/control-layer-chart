@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/doublewordai/control-layer-chart/compare/v1.9.0...v1.10.0) (2026-09-29)
+
+
+### Features
+
+* run heap profiling on every API pod ([#108](https://github.com/doublewordai/control-layer-chart/issues/108)) ([dac808d](https://github.com/doublewordai/control-layer-chart/commit/dac808d5c73cd437272aa1824e43415e35cfed98))
+
 ## [1.9.0](https://github.com/doublewordai/control-layer-chart/compare/v1.8.1...v1.9.0) (2026-09-29)
 
 
