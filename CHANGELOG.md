@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/doublewordai/control-layer-chart/compare/v1.8.1...v1.9.0) (2026-09-29)
+
+
+### Features
+
+* add opt-in heap-profiling API pod ([#106](https://github.com/doublewordai/control-layer-chart/issues/106)) ([a70d3cf](https://github.com/doublewordai/control-layer-chart/commit/a70d3cf7bbfd851132281d363db0dfbcafa1b0d6))
+
 ## [1.8.1](https://github.com/doublewordai/control-layer-chart/compare/v1.8.0...v1.8.1) (2026-09-23)
 
 
