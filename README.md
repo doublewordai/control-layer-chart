@@ -184,62 +184,53 @@ The progress deadline must be greater than the termination grace, and the
 termination grace must be greater than the endpoint drain delay. The chart
 rejects enabled configurations that violate either requirement.
 
-### Heap profiling (diagnostic)
+### Heap profiling
 
-The opt-in heap profiler renders one extra API Deployment
-(`<fullname>-heap-profile`) that samples the dwctl (Rust) heap with jemalloc and serves
-`GET /debug/pprof/heap` (gzipped pprof) on a dedicated port. The canary carries
-the API Service selector labels, so it receives normal API traffic (the point is
-to observe real load), but it is a separate Deployment with the
-`control-layer.doubleword.ai/diagnostic: heap-profile` label in its own
-selector, and it never touches the main Deployment's pods. The pprof listener is
-**never** added to a Service, Ingress or ServiceMonitor endpoint.
+`heapProfiling.enabled: true` samples the dwctl (Rust) heap with jemalloc on
+every API pod and serves `GET /debug/pprof/heap` (gzipped pprof) on a dedicated
+container port. The API Deployment carries the sampling environment, the
+`pprof` port and the Alloy scrape annotations. The pprof listener is **never**
+added to a Service, Ingress or ServiceMonitor endpoint. Toggling the value
+changes the pod template, so the API pods roll.
 
 ```yaml
 heapProfiling:
   enabled: true
-  replicas: 1
   lgProfSample: 19        # mean sample interval 2^N bytes (19 = 512 KiB)
   port: 6060              # containerPort named "pprof"; not in any Service
   scrapeAnnotations: true # Alloy profiles.grafana.com/memory.* annotations
   serviceName: ""         # Pyroscope service_name; default "<fullname>-api"
-  podLabels: {}
   podAnnotations: {}
-  env: {}                 # extra env for this pod only, merged last
-  resources: {}           # defaults to the top-level `resources`
+  env: {}                 # extra container env, merged last
   networkPolicy:
     enabled: false
     from: []              # NetworkPolicyPeer list for the pprof port
 ```
+
+Enable it only with a control-layer image that includes the heap profiling
+change: dwctl rejects unknown config fields, so `DWCTL_HEAP_PROFILING__*` stops
+an older image from starting.
 
 **Overhead.** Sampling only starts when `_RJEM_MALLOC_CONF` includes
 `prof:true,prof_active:true` at process start; the chart injects
 `prof:true,prof_active:true,lg_prof_sample:<N>`. At the default `2^19`
 (512 KiB) mean sample interval, CPU overhead scales with the bytes the pod
 allocates and depends on the workload: an allocation-only benchmark measured
-roughly 45–50% more CPU, and a service that spends little time in the
+roughly 45-50% more CPU, and a service that spends little time in the
 allocator sees much less. Memory grows by a few MiB of sampling metadata plus
-roughly 33 MiB of symbolizer cache after the first dump. Size the canary's
-resources accordingly, measure it against its peers in staging, and keep it
-for diagnostic windows rather than permanent operation. See the control-layer
-`docs/memory-observability.md` for the measurements.
+roughly 33 MiB of symbolizer cache after the first dump. Size the pod's
+resources accordingly. See the control-layer `docs/memory-observability.md`
+for the measurements.
 
-**All API pods.** Set `heapProfiling.allApiPods: true` (with `enabled: true`) to
-sample every API pod instead of running the canary: the main API Deployment then
-carries the profiling env, the `pprof` port and the Alloy scrape annotations,
-and no `<fullname>-heap-profile` Deployment is rendered. The pod template
-changes, so the API pods roll.
+**Disable.** Set `heapProfiling.enabled: false`. The API pods roll without the
+sampling environment. The chart sets `DWCTL_HEAP_PROFILING__ENABLED=true` and
+`DWCTL_HEAP_PROFILING__BIND_ADDRESS=0.0.0.0:<port>` on the API pods.
 
-**Enable / disable.** Set `heapProfiling.enabled: true` to render the
-Deployment and `false` (the default) to remove it on the next sync. The chart
-also sets `DWCTL_HEAP_PROFILING__ENABLED=true` and
-`DWCTL_HEAP_PROFILING__BIND_ADDRESS=0.0.0.0:<port>` on the canary only.
-
-**Capture a profile.** No Service is exposed; reach the pod directly with a
+**Capture a profile.** No Service is exposed; reach a pod directly with a
 port-forward:
 
 ```bash
-kubectl port-forward deploy/<fullname>-heap-profile 6060:6060
+kubectl port-forward deploy/<fullname> 6060:6060
 # in another shell:
 curl -o heap.pb.gz localhost:6060/debug/pprof/heap
 # or the rendered profile in a browser:
@@ -249,10 +240,10 @@ go tool pprof -http=:0 heap.pb.gz
 **Security.** The listener is reachable in-cluster by pod IP only, and is never
 published through a Service or Ingress. If your cluster enforces
 NetworkPolicies, enable `heapProfiling.networkPolicy.enabled: true`; the chart
-renders a policy that selects the canary, keeps the API `http` port open and
+renders a policy that selects the API pods, keeps the API `http` port open and
 restricts the `pprof` port to `heapProfiling.networkPolicy.from` peers (with no
 peers listed the port is denied; `kubectl port-forward` still works). Without
-a policy, any in-cluster workload that can reach the pod IP can read the heap
+a policy, any in-cluster workload that can reach a pod IP can read its heap
 profile, so treat the port as sensitive and prefer the NetworkPolicy on shared
 clusters.
 
@@ -270,19 +261,12 @@ grafana/k8s-monitoring-helm `k8s-monitoring-3.7.1`,
 
 The annotation prefix and actions are configurable in the monitoring chart
 (`profiling.annotations.prefix`, `profiling.pprof.annotations.*`); if you
-override them, mirror the changes here. The canary keeps the API `http` port
-and Service selector labels, so the existing ServiceMonitor (port `http`, path
-`/metrics`) scrapes it as an ordinary API pod, including the always-on
-`/internal/metrics` Prometheus metrics.
+override them, mirror the changes here. The API pods keep the `http` port and Service selector labels, so the
+existing ServiceMonitor is unchanged.
 
 **HPA / PDB.** The chart does not render HorizontalPodAutoscaler or
-PodDisruptionBudget objects. If you add one externally that selects the shared
-API labels, remember it will also match the canary pod: an average-CPU HPA
-metric will include the canary's usage (sampling adds allocator CPU, so this can
-skew scaling decisions; size targets for it or keep the canary short-lived),
-and a PDB will count it toward
-`minAvailable`/`maxUnavailable`. The canary is not added to any chart-managed
-object beyond its own Deployment (and optional NetworkPolicy).
+PodDisruptionBudget objects. An average-CPU HPA that selects the API pods sees
+the sampling overhead (allocator CPU), so size its targets for it.
 
 ### Schema migrations as a pre-rollout Job
 

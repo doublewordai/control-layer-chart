@@ -111,33 +111,16 @@ serviceMonitor:
   scrapeTimeout: 10s
   labels: {}
 
-# Heap profiling (diagnostic).
+# Heap profiling.
 #
-# Opt-in canary: renders ONE extra Deployment for the API role that samples the
-# dwctl (Rust) heap with jemalloc profiling and serves the pprof heap
-# endpoint. Off by default. See the "Heap profiling (diagnostic)" section in
-# README.md for overhead, capture and security guidance.
-#
-# The canary reuses the API pod spec (image, config volume, secrets/envFrom,
-# probes, securityContext, scheduling, rollout lifecycle) and carries the same
-# Service selector labels, so it receives normal API traffic and is scraped by
-# the existing ServiceMonitor. Its own Deployment selector additionally
-# includes control-layer.doubleword.ai/diagnostic=heap-profile, so it never
-# adopts the main API Deployment's pods (and vice versa). The pprof listener is
-# never added to a Service, Ingress or ServiceMonitor endpoint.
+# Samples the dwctl (Rust) heap with jemalloc on every API pod and serves the
+# pprof heap endpoint on a dedicated port. Off by default. See the "Heap
+# profiling" section in README.md for overhead, capture and security guidance.
+# The pprof listener is never added to a Service, Ingress or ServiceMonitor
+# endpoint. The API Deployment's pod template changes when this is toggled, so
+# the API pods roll.
 heapProfiling:
-  # Render the <fullname>-heap-profile Deployment. Disabling removes it on the
-  # next sync.
   enabled: false
-
-  # Sample every API pod instead of rendering the separate canary Deployment.
-  # The main API Deployment then carries the profiling env, the pprof port and
-  # the scrape annotations, and no <fullname>-heap-profile Deployment exists.
-  # Changing the pod template rolls the API pods.
-  allApiPods: false
-
-  # Replicas for the canary only; independent of replicaCount.
-  replicas: 1
 
   # jemalloc lg_prof_sample: mean interval between heap samples is 2^N bytes.
   # 19 = 512 KiB. Lower = finer detail and more overhead, higher = coarser and
@@ -154,25 +137,18 @@ heapProfiling:
   # Set false for clusters without Alloy.
   scrapeAnnotations: true
 
-  # Pyroscope service_name reported for the canary. Empty defaults to
-  # "<fullname>-api" so profiles are distinguishable from the main API pods.
+  # Pyroscope service_name. Empty defaults to "<fullname>-api".
   serviceName: ""
 
-  # Extra labels/annotations for the canary pod only. The diagnostic label and
-  # the scrape annotations are added on top of these.
-  podLabels: {}
+  # Extra pod annotations, added on top of the scrape annotations.
   podAnnotations: {}
 
-  # Extra container env for the canary only, merged last (wins over the
+  # Extra container env, merged last (wins over the
   # heap-profiling defaults). Keys use the application's env names.
   env: {}
 
-  # Resource requests/limits for the canary. Empty inherits the top-level
-  # `resources` block so the canary has the same footprint as an API pod.
-  resources: {}
-
   # Optional NetworkPolicy for clusters that enforce them. It selects the
-  # canary pod and (1) keeps the http port open so normal API traffic keeps
+  # API pods and (1) keeps the http port open so normal API traffic keeps
   # flowing, and (2) restricts the pprof port to the peers in `from`. Requires
   # a NetworkPolicy-capable CNI.
   networkPolicy:
