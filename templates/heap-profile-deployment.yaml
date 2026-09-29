@@ -1,0 +1,36 @@
+{{- if and .Values.heapProfiling.enabled (not .Values.heapProfiling.allApiPods) }}
+{{- $fullname := include "control-layer.fullname" . -}}
+{{- $hp := include "control-layer.heapProfiling.options" (dict "root" . "diagnostic" true) | fromJson -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-heap-profile
+  labels:
+    {{- include "control-layer.labels" . | nindent 4 }}
+    control-layer.doubleword.ai/diagnostic: heap-profile
+spec:
+  replicas: {{ .Values.heapProfiling.replicas }}
+  {{- if .Values.rollout.enabled }}
+  strategy:
+    {{- toYaml .Values.rollout.strategy | nindent 4 }}
+  minReadySeconds: {{ .Values.rollout.minReadySeconds }}
+  progressDeadlineSeconds: {{ .Values.rollout.progressDeadlineSeconds }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "control-layer.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: control-layer
+      {{- /* The diagnostic label is part of the selector so this Deployment
+      never adopts the main API Deployment's pods. The main selector is not
+      changed (it is immutable); it cannot adopt these pods because they carry
+      this Deployment's controller ownerRef. */}}
+      control-layer.doubleword.ai/diagnostic: heap-profile
+{{ include "control-layer.api.podTemplate" (dict
+     "root" .
+     "options" (dict
+        "extraPodLabels" $hp.labels
+        "extraPodAnnotations" $hp.annotations
+        "extraPorts" $hp.ports
+        "extraEnv" $hp.env
+        "resources" .Values.heapProfiling.resources)) }}
+{{- end }}

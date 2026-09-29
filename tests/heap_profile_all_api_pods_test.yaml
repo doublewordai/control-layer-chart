@@ -1,0 +1,53 @@
+suite: heap profiling on all API pods
+templates:
+  - deployment.yaml
+  - heap-profile-deployment.yaml
+  - heap-profile-networkpolicy.yaml
+  - configmap.yaml
+  - secret.yaml
+tests:
+  - it: main API Deployment carries profiling env, pprof port and scrape annotations
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.allApiPods: true
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: _RJEM_MALLOC_CONF, value: "prof:true,prof_active:true,lg_prof_sample:19"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DWCTL_HEAP_PROFILING__ENABLED, value: "true"}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: pprof, containerPort: 6060, protocol: TCP}
+      - equal:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.scrape"]
+          value: "true"
+      - notExists:
+          path: spec.template.metadata.labels["control-layer.doubleword.ai/diagnostic"]
+  - it: no canary Deployment is rendered
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.allApiPods: true
+    template: heap-profile-deployment.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: main Deployment is unchanged when allApiPods is false
+    set:
+      heapProfiling.enabled: true
+    template: deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: pprof, containerPort: 6060, protocol: TCP}
+  - it: network policy selects all API pods
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.allApiPods: true
+      heapProfiling.networkPolicy.enabled: true
+    template: heap-profile-networkpolicy.yaml
+    asserts:
+      - notExists:
+          path: spec.podSelector.matchLabels["control-layer.doubleword.ai/diagnostic"]
