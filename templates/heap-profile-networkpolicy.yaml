@@ -11,7 +11,9 @@ spec:
     matchLabels:
       {{- include "control-layer.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: control-layer
+      {{- if not .Values.heapProfiling.allApiPods }}
       control-layer.doubleword.ai/diagnostic: heap-profile
+      {{- end }}
   policyTypes:
     - Ingress
   ingress:

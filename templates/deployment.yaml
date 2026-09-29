@@ -39,4 +39,15 @@ spec:
     matchLabels:
       {{- include "control-layer.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: control-layer
+{{- if and .Values.heapProfiling.enabled .Values.heapProfiling.allApiPods }}
+{{- $hp := include "control-layer.heapProfiling.options" (dict "root" . "diagnostic" false) | fromJson }}
+{{ include "control-layer.api.podTemplate" (dict
+     "root" .
+     "options" (dict
+        "extraPodLabels" $hp.labels
+        "extraPodAnnotations" $hp.annotations
+        "extraPorts" $hp.ports
+        "extraEnv" $hp.env)) }}
+{{- else }}
 {{ include "control-layer.api.podTemplate" (dict "root" .) }}
+{{- end }}

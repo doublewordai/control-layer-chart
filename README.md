@@ -224,6 +224,12 @@ resources accordingly, measure it against its peers in staging, and keep it
 for diagnostic windows rather than permanent operation. See the control-layer
 `docs/memory-observability.md` for the measurements.
 
+**All API pods.** Set `heapProfiling.allApiPods: true` (with `enabled: true`) to
+sample every API pod instead of running the canary: the main API Deployment then
+carries the profiling env, the `pprof` port and the Alloy scrape annotations,
+and no `<fullname>-heap-profile` Deployment is rendered. The pod template
+changes, so the API pods roll.
+
 **Enable / disable.** Set `heapProfiling.enabled: true` to render the
 Deployment and `false` (the default) to remove it on the next sync. The chart
 also sets `DWCTL_HEAP_PROFILING__ENABLED=true` and

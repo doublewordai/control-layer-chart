@@ -130,6 +130,12 @@ heapProfiling:
   # next sync.
   enabled: false
 
+  # Sample every API pod instead of rendering the separate canary Deployment.
+  # The main API Deployment then carries the profiling env, the pprof port and
+  # the scrape annotations, and no <fullname>-heap-profile Deployment exists.
+  # Changing the pod template rolls the API pods.
+  allApiPods: false
+
   # Replicas for the canary only; independent of replicaCount.
   replicas: 1
 
