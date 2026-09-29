@@ -292,10 +292,9 @@ helm.sh/hook-delete-policy: before-hook-creation
 {{- end }}
 {{/*
 API pod template (the Deployment `spec.template` block), shared by the main
-control-layer Deployment and the opt-in heap-profiling canary so the two pod
-specs cannot drift. Call with a dict:
+control-layer Deployment. Call with a dict:
   root:    the chart context
-  options: (optional) dict of canary-only additions
+  options: (optional) dict of additions
     extraPodLabels      additional pod labels, rendered after .Values.podLabels
     extraPodAnnotations additional pod annotations, rendered after .Values.podAnnotations
     extraPorts          list of {name, containerPort} ports appended after http

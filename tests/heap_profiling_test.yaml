@@ -1,0 +1,162 @@
+suite: test heap profiling
+templates:
+  - deployment.yaml
+  - service.yaml
+  - heap-profiling-networkpolicy.yaml
+  - configmap.yaml
+  - secret.yaml
+tests:
+  - it: should not add profiling to the API pods by default
+    template: deployment.yaml
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: pprof, containerPort: 6060, protocol: TCP}
+      - notExists:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.scrape"]
+
+  - it: should set the profiling environment on the API Deployment
+    set:
+      heapProfiling.enabled: true
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: _RJEM_MALLOC_CONF, value: "prof:true,prof_active:true,lg_prof_sample:19"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DWCTL_HEAP_PROFILING__ENABLED, value: "true"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DWCTL_HEAP_PROFILING__BIND_ADDRESS, value: "0.0.0.0:6060"}
+
+  - it: should expose http and the pprof port
+    set:
+      heapProfiling.enabled: true
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: http, containerPort: 3001, protocol: TCP}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: pprof, containerPort: 6060, protocol: TCP}
+
+  - it: should add the Alloy pprof scrape and service name annotations
+    set:
+      heapProfiling.enabled: true
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.scrape"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.port_name"]
+          value: pprof
+      - equal:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.path"]
+          value: /debug/pprof/heap
+      - equal:
+          path: spec.template.metadata.annotations["resource.opentelemetry.io/service.name"]
+          value: RELEASE-NAME-control-layer-api
+
+  - it: should omit the scrape annotations when disabled
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.scrapeAnnotations: false
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.metadata.annotations["profiles.grafana.com/memory.scrape"]
+
+  - it: should propagate lgProfSample, port and env
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.lgProfSample: 21
+      heapProfiling.port: 7070
+      heapProfiling.env.EXTRA: "1"
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: _RJEM_MALLOC_CONF, value: "prof:true,prof_active:true,lg_prof_sample:21"}
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: EXTRA, value: "1"}
+      - contains:
+          path: spec.template.spec.containers[0].ports
+          content: {name: pprof, containerPort: 7070, protocol: TCP}
+
+  - it: should keep one env entry per name when env and heapProfiling.env overlap
+    set:
+      heapProfiling.enabled: true
+      env.SHARED: "from-env"
+      heapProfiling.env.SHARED: "from-profiling"
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: SHARED, value: "from-profiling"}
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content: {name: SHARED, value: "from-env"}
+
+  - it: should not let heapProfiling.env override the Job-owned migrations mode
+    set:
+      heapProfiling.enabled: true
+      migrations.job.enabled: true
+      heapProfiling.env.DWCTL_MIGRATIONS__MODE: run
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content: {name: DWCTL_MIGRATIONS__MODE, value: "check"}
+
+  - it: should never expose the pprof port through the Service
+    set:
+      heapProfiling.enabled: true
+    template: service.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.ports
+          count: 1
+
+  - it: should not render a NetworkPolicy by default
+    set:
+      heapProfiling.enabled: true
+    template: heap-profiling-networkpolicy.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should render a NetworkPolicy that keeps http open and restricts pprof
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.networkPolicy.enabled: true
+      heapProfiling.networkPolicy.from[0].podSelector.matchLabels.app: alloy
+    template: heap-profiling-networkpolicy.yaml
+    asserts:
+      - isKind:
+          of: NetworkPolicy
+      - equal:
+          path: spec.podSelector.matchLabels["app.kubernetes.io/component"]
+          value: control-layer
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: http
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: pprof
+      - equal:
+          path: spec.ingress[1].from[0].podSelector.matchLabels.app
+          value: alloy
+
+  - it: should deny pprof when the NetworkPolicy has no peers
+    set:
+      heapProfiling.enabled: true
+      heapProfiling.networkPolicy.enabled: true
+    template: heap-profiling-networkpolicy.yaml
+    asserts:
+      - lengthEqual:
+          path: spec.ingress
+          count: 1

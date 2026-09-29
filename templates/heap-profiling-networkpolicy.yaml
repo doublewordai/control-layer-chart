@@ -2,23 +2,18 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "control-layer.fullname" . }}-heap-profile
+  name: {{ include "control-layer.fullname" . }}-heap-profiling
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
-    control-layer.doubleword.ai/diagnostic: heap-profile
 spec:
   podSelector:
     matchLabels:
       {{- include "control-layer.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: control-layer
-      {{- if not .Values.heapProfiling.allApiPods }}
-      control-layer.doubleword.ai/diagnostic: heap-profile
-      {{- end }}
   policyTypes:
     - Ingress
   ingress:
-    # Keep normal API traffic flowing on the http port: the canary exists to
-    # serve real load so its heap reflects production traffic.
+    # Keep normal API traffic flowing on the http port.
     - ports:
         - port: http
           protocol: TCP
