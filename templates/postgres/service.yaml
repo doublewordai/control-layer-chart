@@ -5,6 +5,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-postgres
   labels:
     {{- include "control-layer.postgres.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:

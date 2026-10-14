@@ -27,6 +27,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   {{- if .Values.rollout.enabled }}

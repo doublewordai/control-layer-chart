@@ -52,6 +52,10 @@ metadata:
     {{- with .Values.migrations.job.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+    {{- $own := merge (include "control-layer.migrations.hookAnnotations" (dict "root" . "weight" "0" "wave" .Values.migrations.job.syncWave) | fromYaml) (.Values.migrations.job.annotations | default dict) }}
+    {{- with include "control-layer.commonAnnotationEntries" (dict "root" . "own" $own) }}
+    {{- . | nindent 4 }}
+    {{- end }}
 spec:
   backoffLimit: {{ .Values.migrations.job.backoffLimit }}
   activeDeadlineSeconds: {{ .Values.migrations.job.activeDeadlineSeconds }}
@@ -66,8 +70,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/migrations/config.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/migrations/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include "control-layer.checksum" (dict "root" . "path" "migrations/config.yaml") }}
+        checksum/secret: {{ include "control-layer.checksum" (dict "root" . "path" "migrations/secret.yaml") }}
         {{- with .Values.migrations.job.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

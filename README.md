@@ -145,6 +145,10 @@ The chart supports both internal and external PostgreSQL databases:
 | `affinity` | Affinity rules | `{}` |
 | `volumes` | Additional volumes | `[]` |
 | `volumeMounts` | Additional volume mounts | `[]` |
+| `extraEnv` | Environment variables (EnvVar entries) for API pods only, rendered before the chart's own | `[]` |
+| `extraVolumes` | Volumes for API pods only, rendered before the chart's own | `[]` |
+| `extraVolumeMounts` | Volume mounts for the API container only, rendered before the chart's own | `[]` |
+| `commonAnnotations` | Annotations added to every rendered object; an object's own annotation with the same key wins | `{}` |
 
 ### Graceful rollouts
 
@@ -356,6 +360,8 @@ The fusillade daemon handles background batch processing tasks. By default, it r
 | `fusillade.nodeSelector` | Node selector for fusillade pods | `{}` |
 | `fusillade.tolerations` | Tolerations for fusillade pods | `[]` |
 | `fusillade.affinity` | Affinity rules for fusillade pods | `{}` |
+| `fusillade.strategy` | Deployment strategy for fusillade daemons (per daemon under `fusillade.split.<daemon>.strategy`) | Kubernetes default |
+| `fusillade.terminationGracePeriodSeconds` | Pod termination grace period for fusillade daemons (per daemon under `fusillade.split.<daemon>`) | Kubernetes default |
 | `fusillade.env` | Additional environment variables | `{}` |
 
 When `fusillade.enabled: true`:

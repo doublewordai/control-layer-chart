@@ -6,6 +6,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-keystore
   labels:
     {{- include "control-layer.keystore.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   serviceName: {{ include "control-layer.fullname" . }}-keystore
   # Single instance by design: the keystore is a strongly-consistent custody

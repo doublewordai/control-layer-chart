@@ -6,6 +6,10 @@
 nameOverride: ""
 fullnameOverride: ""
 
+# Annotations added to every object the chart renders (for example an Argo CD
+# sync wave). An object's own annotation with the same key wins.
+commonAnnotations: {}
+
 # This is for the secrets for pulling an image from a private repository
 imagePullSecrets: []
 
@@ -276,6 +280,15 @@ volumeMounts: []
 #   mountPath: "/etc/foo"
 #   readOnly: true
 
+# API pods only (not Fusillade): environment variables (Kubernetes EnvVar
+# entries), volumes and volume mounts rendered before the chart's own, so the
+# chart's own entries win on a duplicate name.
+extraEnv: []
+# - name: FOO
+#   value: bar
+extraVolumes: []
+extraVolumeMounts: []
+
 # Declarative model catalog loaded transactionally by dwctl during startup.
 # Each map entry becomes one YAML file in the mounted directory. An enabled
 # catalog with no files mounts an empty directory and is a startup no-op.
@@ -430,6 +443,12 @@ fusillade:
   nodeSelector: {}
   tolerations: []
   affinity: {}
+
+  # Deployment rollout strategy and pod termination grace period. Unset leaves
+  # Kubernetes' defaults. A split daemon may set its own under split.request or
+  # split.batch.
+  strategy: {}
+  terminationGracePeriodSeconds: null
 
   # Liveness probe for fusillade daemon
   # Defaults to HTTP healthcheck on the same port as the control layer

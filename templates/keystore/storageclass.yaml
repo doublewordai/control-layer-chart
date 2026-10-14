@@ -6,9 +6,15 @@ metadata:
   name: {{ include "control-layer.keystore.storageClassName" . }}
   labels:
     {{- include "control-layer.keystore.labels" . | nindent 4 }}
-  {{- with .Values.keystore.persistence.managedStorageClass.annotations }}
+  {{- $commonAnnotations := include "control-layer.commonAnnotationEntries" (dict "root" . "own" .Values.keystore.persistence.managedStorageClass.annotations) }}
+  {{- if or .Values.keystore.persistence.managedStorageClass.annotations $commonAnnotations }}
   annotations:
+    {{- with .Values.keystore.persistence.managedStorageClass.annotations }}
     {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $commonAnnotations }}
+    {{- . | nindent 4 }}
+    {{- end }}
   {{- end }}
 provisioner: {{ .Values.keystore.persistence.managedStorageClass.provisioner | quote }}
 reclaimPolicy: {{ .Values.keystore.persistence.managedStorageClass.reclaimPolicy | quote }}
