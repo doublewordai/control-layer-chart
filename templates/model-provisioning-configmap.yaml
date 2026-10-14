@@ -5,6 +5,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-model-provisioning
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 {{- if .Values.modelProvisioning.files }}
 data:
   {{- range $name := keys .Values.modelProvisioning.files | sortAlpha }}

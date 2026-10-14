@@ -11,6 +11,9 @@ metadata:
     {{- with $root.Values.serviceMonitor.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+  {{- with include "control-layer.commonAnnotations" $root }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   selector:
     matchLabels:

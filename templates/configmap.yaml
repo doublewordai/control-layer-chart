@@ -4,6 +4,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-config
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 data:
   control-layer-config.yaml: |
     {{- .Values.config | nindent 4 }}
@@ -15,6 +18,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-bootstrap
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 data:
   bootstrap.js: |
     {{- .Values.bootstrap.content | nindent 4 }}
@@ -27,6 +33,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-email-templates
   labels:
     {{- include "control-layer.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 data:
   {{- range $name, $content := .Values.emailTemplates.files }}
   {{ $name }}: |

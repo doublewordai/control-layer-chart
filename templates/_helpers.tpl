@@ -310,10 +310,10 @@ options renders byte-for-byte the same template as before this helper existed.
 {{ "  " }}template:
     metadata:
       annotations:
-        checksum/secret: {{ include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum }}
-        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        checksum/secret: {{ include "control-layer.checksum" (dict "root" $root "path" "secret.yaml") }}
+        checksum/config: {{ include "control-layer.checksum" (dict "root" $root "path" "configmap.yaml") }}
         {{- if $root.Values.modelProvisioning.enabled }}
-        checksum/model-provisioning: {{ include (print $root.Template.BasePath "/model-provisioning-configmap.yaml") $root | sha256sum }}
+        checksum/model-provisioning: {{ include "control-layer.checksum" (dict "root" $root "path" "model-provisioning-configmap.yaml") }}
         {{- end }}
         {{- with $root.Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -376,6 +376,9 @@ options renders byte-for-byte the same template as before this helper existed.
                 name: {{ . | quote }}
             {{- end }}
           env:
+            {{- with $root.Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- if $root.Values.modelProvisioning.enabled }}
             - name: DWCTL_MODEL_PROVISIONING__ENABLED
               value: "true"
@@ -430,6 +433,9 @@ options renders byte-for-byte the same template as before this helper existed.
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- with $root.Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             - name: config
               mountPath: /app/config.yaml
               subPath: control-layer-config.yaml
@@ -448,6 +454,9 @@ options renders byte-for-byte the same template as before this helper existed.
             {{- toYaml . | nindent 12 }}
             {{- end }}
       volumes:
+        {{- with $root.Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         - name: config
           configMap:
             name: {{ include "control-layer.fullname" $root }}-config
@@ -478,3 +487,42 @@ options renders byte-for-byte the same template as before this helper existed.
       {{- end }}
 
 {{- end }}
+
+{{/*
+`commonAnnotations` as the object's `annotations:` key and map, or nothing when
+none are set. For templates whose objects carry no annotations of their own;
+templates that do use control-layer.commonAnnotationEntries.
+*/}}
+{{- define "control-layer.commonAnnotations" -}}
+{{- with .Values.commonAnnotations }}
+annotations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+
+{{/*
+The `commonAnnotations` entries an object does not set itself, as map entries
+(no `annotations:` key): an object's own annotations win. Takes a dict: root
+(the chart context), own (the object's own annotations, as a map).
+*/}}
+{{- define "control-layer.commonAnnotationEntries" -}}
+{{- $own := .own | default dict -}}
+{{- $entries := dict -}}
+{{- range $key, $value := .root.Values.commonAnnotations | default dict }}
+{{- if not (hasKey $own $key) }}{{ $_ := set $entries $key $value }}{{ end }}
+{{- end }}
+{{- with $entries }}{{ toYaml . }}{{ end }}
+{{- end }}
+
+{{/*
+sha256 of a rendered template, computed without `commonAnnotations`: annotations
+on a ConfigMap or Secret do not change what a pod mounts, so they must not roll
+the pods. Takes a dict: root (the chart context), path (the template's path
+under templates/).
+*/}}
+{{- define "control-layer.checksum" -}}
+{{- $context := omit .root "Values" -}}
+{{- $_ := set $context "Values" (omit .root.Values "commonAnnotations") -}}
+{{- include (print .root.Template.BasePath "/" .path) $context | sha256sum -}}
+{{- end }}
+

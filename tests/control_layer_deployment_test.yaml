@@ -220,3 +220,36 @@ tests:
     asserts:
       - failedTemplate:
           errorMessage: rollout.connectionDrainTimeoutSeconds must be 3600 to match the control-layer request timeout
+
+  - it: renders the extra env, volumes and mounts before the chart's own
+    template: deployment.yaml
+    set:
+      extraEnv:
+        - name: EXTRA_DIRECTORY
+          value: /app/extra.d
+      extraVolumes:
+        - name: extra
+          configMap:
+            name: extra
+      extraVolumeMounts:
+        - name: extra
+          mountPath: /app/extra.d
+          readOnly: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[0]
+          value:
+            name: EXTRA_DIRECTORY
+            value: /app/extra.d
+      - equal:
+          path: spec.template.spec.volumes[0]
+          value:
+            name: extra
+            configMap:
+              name: extra
+      - equal:
+          path: spec.template.spec.containers[0].volumeMounts[0]
+          value:
+            name: extra
+            mountPath: /app/extra.d
+            readOnly: true

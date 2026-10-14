@@ -8,6 +8,9 @@ metadata:
   name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
   labels:
     {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" $root }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:

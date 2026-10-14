@@ -15,6 +15,9 @@ metadata:
     {{- include "control-layer.migrations.labels" . | nindent 4 }}
   annotations:
     {{- include "control-layer.migrations.hookAnnotations" (dict "root" . "weight" "-5" "wave" .Values.migrations.job.prerequisiteSyncWave) | nindent 4 }}
+    {{- with include "control-layer.commonAnnotationEntries" (dict "root" . "own" (include "control-layer.migrations.hookAnnotations" (dict "root" . "weight" "-5" "wave" .Values.migrations.job.prerequisiteSyncWave) | fromYaml)) }}
+    {{- . | nindent 4 }}
+    {{- end }}
 data:
   control-layer-config.yaml: |
     {{- .Values.config | nindent 4 }}
