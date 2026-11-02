@@ -44,6 +44,10 @@ spec:
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with $root.Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: fusillade
           {{- with (get $config "securityContext" | default $fusillade.securityContext | default $root.Values.securityContext) }}
@@ -52,6 +56,14 @@ spec:
           {{- end }}
           image: "{{ get $image "repository" | default (get $baseImage "repository") | default $root.Values.image.repository }}:{{ get $image "tag" | default (get $baseImage "tag") | default $root.Values.image.tag | default $root.Chart.AppVersion }}"
           imagePullPolicy: {{ get $image "pullPolicy" | default (get $baseImage "pullPolicy") | default $root.Values.image.pullPolicy }}
+          {{- with $root.Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $root.Values.service.port }}

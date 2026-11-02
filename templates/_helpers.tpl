@@ -342,6 +342,10 @@ options renders byte-for-byte the same template as before this helper existed.
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with $root.Values.initContainers }}
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: control-layer
           {{- if $root.Values.rollout.enabled }}
@@ -359,6 +363,14 @@ options renders byte-for-byte the same template as before this helper existed.
           {{- end }}
           image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag | default $root.Chart.AppVersion }}"
           imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          {{- with $root.Values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ $root.Values.service.port }}

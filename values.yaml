@@ -226,6 +226,10 @@ migrations:
     podLabels: {}
     volumes: []
     volumeMounts: []
+    # Override the migrate container's command; its args stay `migrate`.
+    command: []
+    # Additional init containers on the Job's pod.
+    initContainers: []
   # DWCTL_MIGRATIONS__MODE for application pods when the Job is enabled.
   # `check` is the only mode that makes the Job meaningful; `run` reverts to
   # in-pod migrations while keeping the Job (useful during the first
@@ -262,6 +266,20 @@ readinessProbe:
 #   periodSeconds: 5
 #   timeoutSeconds: 5
 #   failureThreshold: 18  # 90 seconds max startup
+
+# Override the dwctl container's command on the API and Fusillade pods (the
+# image's entrypoint is ./dwctl), e.g. to start it through a launcher:
+# command: ["/tools/launcher", "--", "./dwctl"]
+# The migration Job has its own: migrations.job.command.
+command: []
+
+# Override the dwctl container's args on the API and Fusillade pods.
+args: []
+
+# Additional init containers on the API and Fusillade pods. Native sidecars
+# (an init container with restartPolicy: Always) work too. The migration Job
+# has its own: migrations.job.initContainers.
+initContainers: []
 
 # Additional volumes on the output Deployment definition.
 volumes: []
@@ -651,3 +669,12 @@ keystore:
   nodeSelector: {}
   affinity: {}
   tolerations: {}
+
+# Additional manifests to render with the release, as-is (not templated).
+extraObjects: []
+# - apiVersion: v1
+#   kind: ConfigMap
+#   metadata:
+#     name: my-config
+#   data:
+#     key: value

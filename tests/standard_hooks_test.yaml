@@ -1,0 +1,121 @@
+suite: test standard hooks (command, args, initContainers, extraObjects)
+templates:
+  - deployment.yaml
+  - fusillade/deployment.yaml
+  - migrations/job.yaml
+  - extra-objects.yaml
+  - configmap.yaml
+  - secret.yaml
+  - migrations/config.yaml
+  - migrations/secret.yaml
+tests:
+  - it: leaves command, args and init containers unset by default
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - notExists:
+          path: spec.template.spec.containers[0].args
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: sets command, args and init containers on the API pods
+    template: deployment.yaml
+    set:
+      command: ["/tools/launcher", "--", "./dwctl"]
+      args: ["--validate"]
+      initContainers:
+        - name: fetch-tools
+          image: example/tools:1.0
+        - name: helper
+          image: example/helper:1.0
+          restartPolicy: Always
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["/tools/launcher", "--", "./dwctl"]
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["--validate"]
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: fetch-tools
+      - equal:
+          path: spec.template.spec.initContainers[1].restartPolicy
+          value: Always
+
+  - it: sets the same command and init containers on the Fusillade pods
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      command: ["/tools/launcher", "--", "./dwctl"]
+      initContainers:
+        - name: fetch-tools
+          image: example/tools:1.0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["/tools/launcher", "--", "./dwctl"]
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: fetch-tools
+
+  - it: gives the migration Job its own command and init containers, keeping args migrate
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      secrets.controlLayer.data.DATABASE_URL: "postgres://db.example.com/control_layer"
+      command: ["/not/for/the/job"]
+      migrations.job.command: ["/tools/launcher", "--", "./dwctl"]
+      migrations.job.initContainers:
+        - name: fetch-tools
+          image: example/tools:1.0
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].command
+          value: ["/tools/launcher", "--", "./dwctl"]
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value: ["migrate"]
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: fetch-tools
+
+  - it: leaves the migration Job's command unset by default
+    template: migrations/job.yaml
+    set:
+      migrations.job.enabled: true
+      postgresql.enabled: false
+      secrets.controlLayer.data.DATABASE_URL: "postgres://db.example.com/control_layer"
+      command: ["/not/for/the/job"]
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].command
+      - notExists:
+          path: spec.template.spec.initContainers
+
+  - it: renders nothing for extraObjects by default
+    template: extra-objects.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders extraObjects as-is, leaving template syntax untouched
+    template: extra-objects.yaml
+    set:
+      extraObjects:
+        - apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: launcher-config
+          data:
+            config.yaml: "value: {{ .Value }}"
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: data["config.yaml"]
+          value: "value: {{ .Value }}"
