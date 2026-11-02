@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/doublewordai/control-layer-chart/compare/v1.10.0...v1.11.0) (2026-11-02)
+
+
+### Features
+
+* generic hooks for command, args, init containers and extra objects ([#114](https://github.com/doublewordai/control-layer-chart/issues/114)) ([30a2e8c](https://github.com/doublewordai/control-layer-chart/commit/30a2e8c501be7930cb12351f11ff32197192baeb))
+
 ## [1.10.0](https://github.com/doublewordai/control-layer-chart/compare/v1.9.0...v1.10.0) (2026-09-29)
 
 
