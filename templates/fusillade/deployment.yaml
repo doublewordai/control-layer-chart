@@ -10,22 +10,32 @@
 {{- $database := mergeOverwrite (deepCopy ($fusillade.database | default dict)) (get $config "database" | default dict) -}}
 {{- $podAnnotations := mergeOverwrite (deepCopy ($fusillade.podAnnotations | default dict)) (get $config "podAnnotations" | default dict) -}}
 {{- $podLabels := mergeOverwrite (deepCopy ($fusillade.podLabels | default dict)) (get $config "podLabels" | default dict) -}}
+{{- $strategy := get $config "strategy" | default $fusillade.strategy -}}
+{{- $terminationGracePeriodSeconds := $fusillade.terminationGracePeriodSeconds -}}
+{{- if and (hasKey $config "terminationGracePeriodSeconds") (not (kindIs "invalid" (index $config "terminationGracePeriodSeconds"))) }}{{ $terminationGracePeriodSeconds = index $config "terminationGracePeriodSeconds" }}{{ end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "control-layer.fullname" $root }}{{ $suffix }}
   labels:
     {{- include "control-layer.fusillade.labelsFor" (dict "root" $root "component" $component) | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" $root }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   replicas: {{- if hasKey $config "replicaCount" }} {{ get $config "replicaCount" }}{{- else }} {{ $fusillade.replicaCount }}{{- end }}
   selector:
     matchLabels:
       {{- include "control-layer.fusillade.selectorLabelsFor" (dict "root" $root "component" $component) | nindent 6 }}
+  {{- with $strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   template:
     metadata:
       annotations:
-        checksum/secret: {{ include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum }}
-        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        checksum/secret: {{ include "control-layer.checksum" (dict "root" $root "path" "secret.yaml") }}
+        checksum/config: {{ include "control-layer.checksum" (dict "root" $root "path" "configmap.yaml") }}
         {{- with $podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -40,6 +50,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "control-layer.serviceAccountName" $root }}
+      {{- if not (kindIs "invalid" $terminationGracePeriodSeconds) }}
+      terminationGracePeriodSeconds: {{ $terminationGracePeriodSeconds }}
+      {{- end }}
       {{- with (get $config "podSecurityContext" | default $fusillade.podSecurityContext | default $root.Values.podSecurityContext) }}
       securityContext:
         {{- toYaml . | nindent 8 }}

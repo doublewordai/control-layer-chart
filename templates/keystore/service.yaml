@@ -6,6 +6,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-keystore
   labels:
     {{- include "control-layer.keystore.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   type: ClusterIP
   ports:

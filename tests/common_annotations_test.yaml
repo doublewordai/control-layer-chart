@@ -1,0 +1,81 @@
+suite: test common annotations
+templates:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  - secret.yaml
+  - serviceaccount.yaml
+  - migrations/job.yaml
+  - migrations/config.yaml
+  - migrations/secret.yaml
+tests:
+  - it: annotates every object with commonAnnotations
+    set:
+      commonAnnotations:
+        argocd.argoproj.io/sync-wave: "-20"
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-20"
+        template: deployment.yaml
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-20"
+        template: service.yaml
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-20"
+        template: secret.yaml
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-20"
+        template: serviceaccount.yaml
+
+  - it: leaves objects unannotated by default
+    asserts:
+      - notExists:
+          path: metadata.annotations
+        template: deployment.yaml
+      - notExists:
+          path: metadata.annotations
+        template: service.yaml
+
+  - it: keeps an object's own annotations and adds the common ones
+    set:
+      serviceAccount.annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::123:role/control-layer
+      commonAnnotations:
+        argocd.argoproj.io/sync-wave: "-20"
+    template: serviceaccount.yaml
+    asserts:
+      - equal:
+          path: metadata.annotations
+          value:
+            eks.amazonaws.com/role-arn: arn:aws:iam::123:role/control-layer
+            argocd.argoproj.io/sync-wave: "-20"
+
+  - it: lets a migration hook keep its own sync wave
+    set:
+      postgresql.enabled: false
+      secrets.controlLayer.data.DATABASE_URL: postgres://user:pass@host:5432/db
+      migrations.job.enabled: true
+      commonAnnotations:
+        argocd.argoproj.io/sync-wave: "-20"
+        example.com/owner: platform
+    asserts:
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-5"
+        template: migrations/job.yaml
+      - equal:
+          path: metadata.annotations["example.com/owner"]
+          value: platform
+        template: migrations/job.yaml
+      - equal:
+          path: metadata.annotations["argocd.argoproj.io/sync-wave"]
+          value: "-10"
+        template: migrations/config.yaml
+      - equal:
+          path: metadata.annotations["example.com/owner"]
+          value: platform
+        template: migrations/config.yaml

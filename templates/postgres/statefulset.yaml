@@ -5,6 +5,9 @@ metadata:
   name: {{ include "control-layer.fullname" . }}-postgres
   labels:
     {{- include "control-layer.postgres.labels" . | nindent 4 }}
+  {{- with include "control-layer.commonAnnotations" . }}
+  {{- . | nindent 2 }}
+  {{- end }}
 spec:
   serviceName: {{ include "control-layer.fullname" . }}-postgres
   replicas: {{ .Values.postgresql.replicaCount }}
@@ -14,7 +17,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret: {{ include (print $.Template.BasePath "/postgres/secret.yaml") . | sha256sum }}
+        checksum/secret: {{ include "control-layer.checksum" (dict "root" . "path" "postgres/secret.yaml") }}
         {{- with .Values.postgresql.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

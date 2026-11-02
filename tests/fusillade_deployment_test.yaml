@@ -371,3 +371,78 @@ tests:
           content:
             name: DWCTL_BACKGROUND_SERVICES__BATCH_DAEMON__MODE
             value: "request_only"
+
+  - it: sets the rollout strategy and grace period on both split daemons
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      fusillade.strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0
+          maxSurge: 1
+      fusillade.terminationGracePeriodSeconds: 3700
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.strategy
+          value:
+            type: RollingUpdate
+            rollingUpdate:
+              maxUnavailable: 0
+              maxSurge: 1
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 3700
+
+  - it: lets a split daemon override the grace period
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+      fusillade.terminationGracePeriodSeconds: 3700
+      fusillade.split.request.terminationGracePeriodSeconds: 60
+    asserts:
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 60
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 3700
+        documentIndex: 1
+
+  - it: leaves strategy and grace period to Kubernetes by default
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      fusillade.split.enabled: true
+    asserts:
+      - notExists:
+          path: spec.strategy
+      - notExists:
+          path: spec.template.spec.terminationGracePeriodSeconds
+
+  - it: does not give the daemons the API pods' extra env and volumes
+    template: fusillade/deployment.yaml
+    set:
+      fusillade.enabled: true
+      extraEnv:
+        - name: API_ONLY
+          value: "1"
+      extraVolumes:
+        - name: api-only
+          emptyDir: {}
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: API_ONLY
+            value: "1"
+      - notContains:
+          path: spec.template.spec.volumes
+          content:
+            name: api-only
+            emptyDir: {}
