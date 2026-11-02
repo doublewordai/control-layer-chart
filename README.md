@@ -124,6 +124,21 @@ The chart supports both internal and external PostgreSQL databases:
 | `config` | Control layer application configuration (YAML) | See values.yaml |
 | `env` | Additional environment variables | `{}` |
 
+### Extending the pods
+
+Generic hooks for adding to the dwctl pods without changing the chart.
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `command` | Override the dwctl container's command (the image entrypoint is `./dwctl`) on the API and Fusillade pods | `[]` |
+| `args` | Override the dwctl container's args on the API and Fusillade pods | `[]` |
+| `initContainers` | Additional init containers on the API and Fusillade pods; native sidecars (`restartPolicy: Always`) work too | `[]` |
+| `volumes` / `volumeMounts` | Additional volumes and dwctl container mounts on the API and Fusillade pods | `[]` |
+| `migrations.job.command` | Override the migration Job's command; its args stay `migrate` | `[]` |
+| `migrations.job.initContainers` | Additional init containers on the migration Job | `[]` |
+| `migrations.job.volumes` / `migrations.job.volumeMounts` | Additional volumes and mounts on the migration Job | `[]` |
+| `extraObjects` | Additional manifests rendered with the release as-is (not templated) | `[]` |
+
 ### Resources and Probes
 
 | Parameter | Description | Default |

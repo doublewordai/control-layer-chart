@@ -1,0 +1,7 @@
+{{- /* Additional manifests from .Values.extraObjects, rendered as-is: not
+  passed through `tpl`, so their contents (e.g. another tool's templates) are
+  left untouched. */ -}}
+{{- range .Values.extraObjects }}
+---
+{{ toYaml . }}
+{{- end }}
