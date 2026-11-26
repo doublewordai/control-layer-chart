@@ -35,6 +35,7 @@ jobs:
 
   publish:
     name: Publish chart and release record
+    concurrency: {group: publish-main, cancel-in-progress: false}
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
@@ -64,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           version="0.0.0-sha.${SOURCE_SHA:0:12}"
-          helm package . --destination "$RUNNER_TEMP" --version "$version" --app-version "$SOURCE_SHA"
+          helm package . --destination "$RUNNER_TEMP" --version "$version"
           helm push "$RUNNER_TEMP/control-layer-${version}.tgz" oci://ghcr.io/doublewordai/charts
           descriptor=$(oras manifest fetch --descriptor "ghcr.io/doublewordai/charts/control-layer:${version}")
           digest=$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<< "$descriptor")
