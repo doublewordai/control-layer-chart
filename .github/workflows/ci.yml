@@ -19,7 +19,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
-          version: "3.13.0"
+          version: "3.22.1"
 
       - name: Install just
         uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
@@ -52,7 +52,7 @@ jobs:
           ref: ${{ github.sha }}
       - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
-          version: "3.13.0"
+          version: "3.22.1"
       - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
       - name: Log in to GitHub Container Registry
         env:
