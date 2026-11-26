@@ -21,14 +21,21 @@ This chart deploys the control layer service, which includes:
 
 ### Install from OCI Registry
 
+Every push to `main` publishes the chart as `0.0.0-sha.<commit12>`, where
+`<commit12>` is the first 12 characters of the source commit on `main`. Find the
+current version in the
+`ghcr.io/doublewordai/releases/control-layer-chart:latest` release record, or on
+the chart's GHCR package page. Replace `<commit12>` before running either
+command.
+
 ```bash
-helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version "0.0.0-sha.<commit12>"
 ```
 
 You can also provide custom values:
 
 ```bash
-helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer -f custom-values.yaml
+helm install my-control-layer oci://ghcr.io/doublewordai/charts/control-layer --version "0.0.0-sha.<commit12>" -f custom-values.yaml
 ```
 
 ## Configuration

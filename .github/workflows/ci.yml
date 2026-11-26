@@ -12,17 +12,17 @@ jobs:
   helm-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
         with:
           version: "3.13.0"
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
 
       - name: Install helm-unittest
         run: helm plugin install https://github.com/helm-unittest/helm-unittest.git --version 1.0.2
@@ -32,3 +32,92 @@ jobs:
 
       - name: Run tests
         run: just test
+
+  publish:
+    name: Publish chart and release record
+    concurrency: {group: publish-main, cancel-in-progress: false}
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    needs: [helm-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+        with:
+          version: "3.13.0"
+      - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 # v1
+      - name: Log in to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          echo "$GHCR_TOKEN" | oras login ghcr.io --username "${{ github.actor }}" --password-stdin
+      - name: Package and publish commit-versioned chart
+        id: artifact
+        run: |
+          set -euo pipefail
+          version="0.0.0-sha.${SOURCE_SHA:0:12}"
+          helm package . --destination "$RUNNER_TEMP" --version "$version"
+          helm push "$RUNNER_TEMP/control-layer-${version}.tgz" oci://ghcr.io/doublewordai/charts
+          descriptor=$(oras manifest fetch --descriptor "ghcr.io/doublewordai/charts/control-layer:${version}")
+          digest=$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$"))' <<< "$descriptor")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # doublewordai/internal's "Ops / Pull releases" workflow reads this record
+      # from GHCR with its own token; this repository writes nothing into internal.
+      - name: Publish the release record
+        env:
+          CHART_DIGEST: ${{ steps.artifact.outputs.digest }}
+          CHART_VERSION: ${{ steps.artifact.outputs.version }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ ! "$CHART_VERSION" =~ ^0\.0\.0-sha\.[0-9a-f]{12}$ ]] || [[ ! "$CHART_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Published chart identity is invalid"
+            exit 1
+          fi
+          jq -n \
+            --arg version "$CHART_VERSION" \
+            --arg sha "$SOURCE_SHA" \
+            --arg published_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg run_url "$RUN_URL" \
+            --arg digest "$CHART_DIGEST" \
+            '{
+              component: "control-layer-chart",
+              version: $version,
+              source_repository: "doublewordai/control-layer-chart",
+              source_sha: $sha,
+              published_at: $published_at,
+              run_url: $run_url,
+              chart: {
+                repository: "oci://ghcr.io/doublewordai/charts/control-layer",
+                digest: $digest
+              }
+            }' > release.json
+          tag=$(jq -r .version release.json | tr -c 'A-Za-z0-9_.\n-' '-' | cut -c1-128)
+          ref="ghcr.io/doublewordai/releases/control-layer-chart"
+          oras push "$ref:$tag" --artifact-type application/vnd.doubleword.release.v1+json \
+            release.json:application/json
+          main_sha=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [[ "$main_sha" == "$SOURCE_SHA" ]]; then
+            oras tag "$ref:$tag" latest
+          else
+            echo "Not moving latest: main is now $main_sha"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Chart published" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Chart:** control-layer" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Version:** ${{ steps.artifact.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Source commit:** $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
